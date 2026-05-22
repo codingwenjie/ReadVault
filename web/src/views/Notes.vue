@@ -1,18 +1,45 @@
 <template>
   <div class="page-container">
-    <NavBar />
-    
     <div class="page-content">
       <div class="page-header">
         <h1 class="page-title">我的笔记</h1>
         <p class="page-subtitle">共 {{ totalNoteCount }} 条笔记 · {{ totalBookCount }} 本书</p>
       </div>
 
-      <div v-if="loading" class="spinner-container">
+      <div v-if="showSearchResults" class="search-results-container">
+        <div class="search-results-header">
+          <span class="results-count">找到 {{ searchResults.length }} 条结果</span>
+        </div>
+        <div class="search-results-list">
+          <div
+            v-for="(result, index) in searchResults"
+            :key="index"
+            class="search-result-item"
+            @click="handleSearchResultClick(result)"
+          >
+            <div class="result-type">
+              <span :class="['type-badge', result.type]">{{ result.type === 'bookmark' ? '划线' : '想法' }}</span>
+            </div>
+            <div class="result-content">
+              <p class="result-text">{{ highlightKeyword(result.type === 'bookmark' ? (result.item as Bookmark).markText : (result.item as Review).content) }}</p>
+              <span class="result-book">{{ result.bookTitle }}</span>
+            </div>
+          </div>
+          <div v-if="searchResults.length === 0" class="no-search-results">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <span>没有找到匹配的笔记</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="loading && !showSearchResults" class="spinner-container">
         <div class="spinner"></div>
       </div>
 
-      <div v-else-if="error" class="error-state">
+      <div v-else-if="error && !showSearchResults" class="error-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -24,11 +51,16 @@
       <div v-else class="notes-layout">
         <div class="books-sidebar">
           <div class="sidebar-header">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-            </svg>
-            <span>有笔记的书籍</span>
+            <div class="header-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+              </svg>
+            </div>
+            <div class="header-content">
+              <span class="header-title">有笔记的书籍</span>
+              <span class="header-count">{{ totalBookCount }} 本书</span>
+            </div>
           </div>
           
           <div class="sidebar-list">
@@ -44,26 +76,24 @@
                 <h4>{{ book.book.title }}</h4>
                 <p>{{ book.book.author }}</p>
                 <div class="note-stats">
-                  <span class="stat">
+                  <span class="stat stat-highlight">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <line x1="18" y1="20" x2="12" y2="14"></line>
-                      <line x1="12" y1="20" x2="18" y2="14"></line>
+                      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
                     </svg>
                     {{ book.noteCount }}
                   </span>
-                  <span class="stat">
+                  <span class="stat stat-review">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                     </svg>
                     {{ book.reviewCount }}
                   </span>
-                  <span class="stat">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
-                    </svg>
-                    {{ book.bookmarkCount }}
-                  </span>
                 </div>
+              </div>
+              <div class="book-item-arrow" v-if="selectedBookId === book.bookId">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
               </div>
             </div>
           </div>
@@ -91,25 +121,53 @@
             <div class="book-header">
               <div class="book-cover-large">
                 <img :src="selectedBook.book.cover" :alt="selectedBook.book.title" />
+                <div class="book-progress-badge">{{ Math.round(selectedBook.readingProgress) }}%</div>
               </div>
               <div class="book-meta">
                 <h2>{{ selectedBook.book.title }}</h2>
-                <p>{{ selectedBook.book.author }}</p>
+                <p class="book-author">{{ selectedBook.book.author }}</p>
                 <div class="progress-wrapper">
                   <div class="progress-bar">
                     <div class="progress-fill" :style="{ width: selectedBook.readingProgress + '%' }"></div>
                   </div>
-                  <span class="progress-text">阅读进度: {{ Math.round(selectedBook.readingProgress) }}%</span>
+                  <span class="progress-text">阅读进度</span>
                 </div>
               </div>
-              <button class="btn btn-primary export-btn" @click="exportMarkdown">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                导出 Markdown
-              </button>
+              <div class="export-dropdown">
+                <button class="btn btn-primary export-btn" @click="showExportMenu = !showExportMenu">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  导出
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="dropdown-arrow">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <div v-if="showExportMenu" class="export-menu" @click.self="showExportMenu = false">
+                  <button class="export-menu-item" @click="exportMarkdown">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="16" y1="13" x2="8" y2="13"></line>
+                      <line x1="16" y1="17" x2="8" y2="17"></line>
+                      <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    Markdown (.md)
+                  </button>
+                  <button class="export-menu-item" @click="exportTxt">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="16" y1="13" x2="8" y2="13"></line>
+                      <line x1="16" y1="17" x2="8" y2="17"></line>
+                      <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    TXT (.txt)
+                  </button>
+                </div>
+              </div>
             </div>
 
             <div class="notes-tabs">
@@ -119,10 +177,10 @@
                 @click="activeTab = 'highlights'"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="20" x2="12" y2="14"></line>
-                  <line x1="12" y1="20" x2="18" y2="14"></line>
+                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
                 </svg>
-                划线 ({{ bookmarks.length }})
+                划线
+                <span class="tab-count">{{ bookmarks.length }}</span>
               </button>
               <button
                 class="tab-btn"
@@ -132,7 +190,8 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                 </svg>
-                想法 ({{ reviews.length }})
+                想法
+                <span class="tab-count">{{ reviews.length }}</span>
               </button>
             </div>
 
@@ -149,7 +208,11 @@
                 :key="chapterUid"
                 class="chapter-group"
               >
-                <h3 class="chapter-title">{{ getChapterTitle(chapterUid) }}</h3>
+                <div class="chapter-header">
+                  <div class="chapter-dot"></div>
+                  <h3 class="chapter-title">{{ getChapterTitle(chapterUid) }}</h3>
+                  <span class="chapter-count">{{ chapterBookmarks.length }} 条</span>
+                </div>
                 <div
                   v-for="bookmark in chapterBookmarks"
                   :key="bookmark.bookmarkId"
@@ -175,13 +238,13 @@
                 :key="review.reviewId"
                 class="review-item"
               >
-                <div v-if="review.chapterName" class="review-chapter">
-                  {{ review.chapterName }}
-                </div>
-                <p class="review-content">{{ review.content }}</p>
-                <div class="review-footer">
+                <div class="review-header">
+                  <div v-if="review.chapterName" class="review-chapter">
+                    {{ review.chapterName }}
+                  </div>
                   <span class="review-time">{{ formatTime(review.createTime) }}</span>
                 </div>
+                <p class="review-content">{{ review.content }}</p>
               </div>
             </div>
           </div>
@@ -194,8 +257,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { wereadApi } from '@/api/weread'
-import { formatTime, generateMarkdown, downloadFile } from '@/utils'
-import NavBar from '@/components/NavBar.vue'
+import { formatTime, generateMarkdown, generateTxt, downloadFile } from '@/utils'
 import type { NotebookBook, Bookmark, Chapter, Review } from '@/api/weread'
 
 const notebookBooks = ref<NotebookBook[]>([])
@@ -211,6 +273,11 @@ const chapters = ref<Chapter[]>([])
 const reviews = ref<Review[]>([])
 const bookDetailLoading = ref(false)
 const activeTab = ref('highlights')
+const showExportMenu = ref(false)
+
+const searchKeyword = ref('')
+const searchResults = ref<{ type: 'bookmark' | 'review'; item: Bookmark | Review; bookId: string; bookTitle: string }[]>([])
+const showSearchResults = ref(false)
 
 const groupedBookmarks = computed(() => {
   const groups: Record<number, Bookmark[]> = {}
@@ -223,9 +290,10 @@ const groupedBookmarks = computed(() => {
   return groups
 })
 
-const getChapterTitle = (chapterUid: number): string => {
-  const chapter = chapters.value.find(c => c.chapterUid === chapterUid)
-  return chapter?.title || `章节 ${chapterUid}`
+const getChapterTitle = (chapterUid: string | number): string => {
+  const uid = Number(chapterUid)
+  const chapter = chapters.value.find(c => c.chapterUid === uid)
+  return chapter?.title || `章节 ${uid}`
 }
 
 const loadNotebooks = async () => {
@@ -246,6 +314,18 @@ const loadNotebooks = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const handleSearchResultClick = async (result: { type: 'bookmark' | 'review'; item: Bookmark | Review; bookId: string; bookTitle: string }) => {
+  await selectBook(result.bookId)
+  activeTab.value = result.type
+}
+
+const highlightKeyword = (text: string | undefined): string => {
+  if (!text || !searchKeyword.value) return text || ''
+  const keyword = searchKeyword.value
+  const regex = new RegExp(`(${keyword})`, 'gi')
+  return text.replace(regex, '<mark class="highlight">$1</mark>')
 }
 
 const selectBook = async (bookId: string) => {
@@ -287,6 +367,23 @@ const exportMarkdown = () => {
 
   const filename = `${selectedBook.value.book.title}-笔记.md`
   downloadFile(markdown, filename)
+  showExportMenu.value = false
+}
+
+const exportTxt = () => {
+  if (!selectedBook.value) return
+
+  const txt = generateTxt(
+    bookmarks.value,
+    reviews.value,
+    chapters.value,
+    selectedBook.value.book.title,
+    selectedBook.value.book.author
+  )
+
+  const filename = `${selectedBook.value.book.title}-笔记.txt`
+  downloadFile(txt, filename, 'text/plain')
+  showExportMenu.value = false
 }
 
 onMounted(() => {
@@ -297,70 +394,84 @@ onMounted(() => {
 <style scoped>
 .notes-layout {
   display: flex;
-  gap: var(--spacing-lg);
-  margin-top: var(--spacing-xl);
+  gap: 24px;
+  margin-top: 0;
 }
 
 .books-sidebar {
-  width: 360px;
+  width: 208px;
   flex-shrink: 0;
-  background: var(--color-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
-  max-height: calc(100vh - 220px);
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-border);
+  max-height: calc(100vh - 180px);
 }
 
 .sidebar-header {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-lg);
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  font-weight: 600;
-  font-size: var(--font-size-base);
-}
-
-.sidebar-header svg {
-  width: 22px;
-  height: 22px;
+  display: none;
 }
 
 .sidebar-list {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-sm);
+  padding: 0;
+}
+
+.sidebar-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.sidebar-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-list::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.2);
+  border-radius: 10px;
+}
+
+.sidebar-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.35);
 }
 
 .book-item {
   display: flex;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 10px;
+  border-radius: 0;
   cursor: pointer;
-  transition: all var(--transition-fast);
-  margin-bottom: var(--spacing-xs);
+  transition: all 150ms;
+  margin-bottom: 0;
+  position: relative;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.book-item:last-child {
+  border-bottom: none;
 }
 
 .book-item:hover {
-  background: var(--color-secondary);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .book-item.active {
-  background: var(--color-primary-glass);
-  border-left: 3px solid var(--color-primary);
+  background: rgba(102, 126, 234, 0.06);
+  border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+}
+
+.book-item.active:last-child {
+  border-bottom: none;
 }
 
 .book-thumb {
-  width: 56px;
-  height: 74px;
+  width: 36px;
+  height: 48px;
   object-fit: cover;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .book-summary {
@@ -369,73 +480,86 @@ onMounted(() => {
 }
 
 .book-summary h4 {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-foreground);
-  margin: 0 0 var(--spacing-xs) 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e1b4b;
+  margin: 0 0 2px 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.book-item.active .book-summary h4 {
+  color: #667eea;
 }
 
 .book-summary p {
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
-  margin: 0 0 var(--spacing-sm) 0;
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
 }
 
 .note-stats {
   display: flex;
-  gap: var(--spacing-md);
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .note-stats .stat {
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.stat-highlight {
+  color: #667eea;
+}
+
+.stat-review {
+  color: #f59e0b;
 }
 
 .note-stats .stat svg {
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
 }
 
 .notes-detail {
   flex: 1;
-  background: var(--color-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
   min-height: 400px;
-  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
 }
 
 .empty-notes {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--spacing-3xl);
-  color: var(--color-muted-foreground);
+  padding: 64px 20px;
+  color: #9ca3af;
 }
 
 .empty-notes svg {
-  width: 48px;
-  height: 48px;
-  margin-bottom: var(--spacing-md);
-  opacity: 0.4;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  opacity: 0.25;
 }
 
 .empty-notes span {
-  font-size: var(--font-size-base);
+  font-size: 14px;
 }
 
 .empty-state {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-3xl);
+  padding: 64px 20px;
 }
 
 .empty-icon-wrap {
@@ -444,41 +568,47 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-secondary);
-  border-radius: var(--radius-xl);
-  margin-bottom: var(--spacing-lg);
+  background: #f3f4f6;
+  border-radius: 16px;
+  margin-bottom: 16px;
 }
 
 .empty-icon-wrap svg {
   width: 40px;
   height: 40px;
-  color: var(--color-muted-foreground);
+  color: #9ca3af;
 }
 
 .empty-text {
-  font-size: var(--font-size-base);
-  color: var(--color-muted-foreground);
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .book-notes {
-  padding: var(--spacing-lg);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .book-header {
   display: flex;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-  padding-bottom: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .book-cover-large {
-  width: 110px;
-  height: 146px;
+  position: relative;
+  width: 48px;
+  height: 64px;
   flex-shrink: 0;
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .book-cover-large img {
@@ -487,133 +617,270 @@ onMounted(() => {
   object-fit: cover;
 }
 
+.book-progress-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  text-align: right;
+  backdrop-filter: blur(4px);
+}
+
 .book-meta {
   flex: 1;
 }
 
 .book-meta h2 {
-  font-size: var(--font-size-xl);
+  font-size: 16px;
   font-weight: 600;
-  color: var(--color-foreground);
-  margin: 0 0 var(--spacing-sm) 0;
+  color: #1e1b4b;
+  margin: 0 0 4px 0;
 }
 
-.book-meta p {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted-foreground);
-  margin: 0 0 var(--spacing-md) 0;
+.book-author {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 8px 0;
 }
 
 .progress-wrapper {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xs);
+  align-items: center;
+  gap: 12px;
 }
 
 .progress-bar {
-  height: 8px;
-  background: var(--color-secondary);
-  border-radius: var(--radius-full);
+  flex: 1;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 9999px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: var(--color-primary);
-  border-radius: var(--radius-full);
-  transition: width var(--transition-normal);
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 9999px;
+  transition: width 300ms;
 }
 
 .progress-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
 }
 
 .export-btn {
   align-self: flex-start;
-  padding: var(--spacing-sm) var(--spacing-lg);
-  gap: var(--spacing-sm);
+  padding: 8px 16px;
+  gap: 8px;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.export-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
 }
 
 .export-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+}
+
+.dropdown-arrow {
+  width: 12px;
+  height: 12px;
+  margin-left: 4px;
+  transition: transform 200ms;
+}
+
+.export-btn:hover .dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.export-dropdown {
+  position: relative;
+}
+
+.export-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e5e7eb;
+  min-width: 180px;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.export-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  color: #1e1b4b;
+  transition: background 150ms;
+  text-align: left;
+}
+
+.export-menu-item:hover {
+  background: #f3f4f6;
+}
+
+.export-menu-item svg {
+  width: 14px;
+  height: 14px;
+  color: #9ca3af;
 }
 
 .notes-tabs {
   display: flex;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-lg);
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .tab-btn {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
-  padding: var(--spacing-sm) var(--spacing-lg);
+  gap: 6px;
+  padding: 8px 18px;
   border: none;
-  background: var(--color-secondary);
-  border-radius: var(--radius-md);
+  background: #f3f4f6;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   font-weight: 500;
-  color: var(--color-muted-foreground);
-  transition: all var(--transition-fast);
+  color: #6b7280;
+  transition: all 150ms;
 }
 
 .tab-btn svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+}
+
+.tab-count {
+  background: rgba(0, 0, 0, 0.06);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
 }
 
 .tab-btn:hover {
-  background: var(--color-secondary);
-  opacity: 0.8;
+  background: #e5e7eb;
+  opacity: 0.9;
 }
 
 .tab-btn.active {
-  background: var(--color-primary);
-  color: var(--color-primary-foreground);
-  box-shadow: var(--shadow-sm);
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.25);
+}
+
+.tab-btn.active .tab-count {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .highlights-list,
 .reviews-list {
-  max-height: calc(100vh - 380px);
+  flex: 1;
   overflow-y: auto;
+  padding-right: 8px;
 }
 
 .chapter-group {
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: 24px;
+}
+
+.chapter-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.chapter-dot {
+  width: 8px;
+  height: 8px;
+  background: #667eea;
+  border-radius: 50%;
 }
 
 .chapter-title {
-  font-size: var(--font-size-base);
+  font-size: 15px;
   font-weight: 600;
-  color: var(--color-foreground);
-  margin: 0 0 var(--spacing-md) 0;
-  padding-left: var(--spacing-md);
-  border-left: 4px solid var(--color-primary);
+  color: #1e1b4b;
+  margin: 0;
+}
+
+.chapter-count {
+  font-size: 12px;
+  color: #9ca3af;
+  background: #f3f4f6;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  margin-left: auto;
 }
 
 .highlight-item {
-  background: var(--color-secondary);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
-  transition: all var(--transition-fast);
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 12px;
+  transition: all 200ms;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .highlight-item:hover {
-  background: var(--color-secondary);
-  opacity: 0.8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.highlight-quote {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(102, 126, 234, 0.06);
+  border-radius: 8px;
+  color: #667eea;
+  margin-bottom: 10px;
+}
+
+.highlight-quote svg {
+  width: 12px;
+  height: 12px;
 }
 
 .highlight-text {
-  font-size: var(--font-size-sm);
-  line-height: 1.8;
-  color: var(--color-foreground);
-  margin: 0 0 var(--spacing-sm) 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #1e1b4b;
+  margin: 0 0 10px 0;
+  font-weight: 500;
+  border-left: 3px solid #667eea;
+  padding-left: 14px;
 }
 
 .highlight-footer {
@@ -622,62 +889,72 @@ onMounted(() => {
 }
 
 .highlight-time {
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 .review-item {
-  background: rgba(245, 158, 11, 0.08);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-lg);
-  margin-bottom: var(--spacing-md);
-  border-left: 4px solid var(--color-warning);
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 200ms;
+}
+
+.review-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.review-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
 }
 
 .review-chapter {
-  font-size: var(--font-size-sm);
-  color: var(--color-warning);
+  font-size: 13px;
+  color: #f59e0b;
   font-weight: 500;
-  margin: 0 0 var(--spacing-sm) 0;
-}
-
-.review-content {
-  font-size: var(--font-size-sm);
-  line-height: 1.8;
-  color: var(--color-foreground);
-  margin: 0 0 var(--spacing-sm) 0;
-}
-
-.review-footer {
-  display: flex;
-  justify-content: flex-end;
+  background: #fffbeb;
+  padding: 4px 10px;
+  border-radius: 9999px;
 }
 
 .review-time {
-  font-size: var(--font-size-xs);
-  color: var(--color-muted-foreground);
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.review-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #6b7280;
+  margin: 0;
 }
 
 .spinner-container {
   display: flex;
   justify-content: center;
-  padding: var(--spacing-3xl);
+  align-items: center;
+  padding: 64px 20px;
 }
 
 .spinner {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border: 3px solid rgba(102, 126, 234, 0.1);
-  border-top-color: var(--color-primary);
+  border-top-color: #667eea;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 .spinner-sm {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 3px solid rgba(102, 126, 234, 0.1);
-  border-top-color: var(--color-primary);
+  border-top-color: #667eea;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -690,50 +967,227 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--spacing-3xl);
-  color: var(--color-destructive);
+  padding: 64px 20px;
+  color: #ef4444;
 }
 
 .error-state svg {
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--spacing-md);
+  width: 60px;
+  height: 60px;
+  margin-bottom: 16px;
   opacity: 0.5;
 }
 
 .error-state p {
   margin: 0;
-  font-size: var(--font-size-base);
+  font-size: 14px;
+}
+
+.search-box-wrapper {
+  width: 100%;
+  max-width: 400px;
+  margin-top: 16px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  transition: all 150ms;
+}
+
+.search-box:focus-within {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.08);
+}
+
+.search-box svg {
+  width: 16px;
+  height: 16px;
+  color: #9ca3af;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  color: #1e1b4b;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 6px;
+  transition: all 150ms;
+}
+
+.search-clear:hover {
+  background: #f3f4f6;
+}
+
+.search-results-container {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.search-results-header {
+  padding: 12px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8f7ff;
+}
+
+.results-count {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.search-results-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.search-result-item:hover {
+  background: #f8f7ff;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.result-type {
+  flex-shrink: 0;
+}
+
+.type-badge {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.type-badge.bookmark {
+  background: rgba(102, 126, 234, 0.08);
+  color: #667eea;
+}
+
+.type-badge.review {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.result-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.result-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1e1b4b;
+  margin: 0 0 4px 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.result-text .highlight {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+.result-book {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.no-search-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 20px;
+  color: #9ca3af;
+}
+
+.no-search-results svg {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  opacity: 0.5;
 }
 
 @media (max-width: 900px) {
   .notes-layout {
     flex-direction: column;
   }
-  
+
   .books-sidebar {
     width: 100%;
-    max-height: 240px;
+    max-height: 280px;
   }
-  
+
   .book-header {
     flex-direction: column;
+    gap: 16px;
   }
-  
+
   .book-cover-large {
     width: 100%;
     height: auto;
     aspect-ratio: 3/4;
   }
-  
+
   .book-cover-large img {
     width: 100%;
     height: 100%;
   }
-  
+
+  .book-progress-badge {
+    text-align: center;
+  }
+
   .export-btn {
-    align-self: flex-start;
-    margin-top: var(--spacing-md);
+    align-self: stretch;
+    justify-content: center;
+    margin-top: 12px;
+  }
+
+  .progress-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .progress-bar {
+    width: 100%;
   }
 }
 </style>

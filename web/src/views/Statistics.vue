@@ -1,18 +1,40 @@
 <template>
   <div class="page-container">
-    <NavBar />
-    
     <div class="page-content">
+      <!-- Header -->
       <div class="page-header">
         <h1 class="page-title">阅读统计</h1>
-        <p class="page-subtitle">追踪你的阅读习惯和成就</p>
+        <p class="page-subtitle">{{ periodLabel }} · 数据概览</p>
       </div>
 
-      <div v-if="loading" class="spinner-container">
+      <div class="period-selector">
+        <div class="period-tabs">
+          <button
+            v-for="tab in periodTabs"
+            :key="tab.mode"
+            class="period-tab"
+            :class="{ active: selectedMode === tab.mode && !selectedMonth }"
+            @click="selectPeriod(tab.mode)"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+        <div class="month-picker" v-if="showMonthPicker">
+          <button class="month-btn" @click="shiftMonth(-1)" :disabled="isFirstMonth">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          </button>
+          <span class="month-label">{{ monthLabel }}</span>
+          <button class="month-btn" @click="shiftMonth(1)" :disabled="isCurrentMonth">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+      </div>
+
+      <div v-if="loading" class="spinner-wrap">
         <div class="spinner"></div>
       </div>
 
-      <div v-else-if="error" class="error-state">
+      <div v-else-if="error" class="error-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
           <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -21,195 +43,164 @@
         <p>{{ error }}</p>
       </div>
 
-      <div v-else>
-        <div class="stats-cards">
+      <div v-else class="space-y-5">
+        <!-- Stat Cards -->
+        <div class="stat-grid">
           <div class="stat-card">
-            <div class="stat-icon-wrap stat-icon-1">
+            <div class="stat-icon grad-purple">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 19V6l12-3v13"></path>
-                <circle cx="6" cy="18" r="3"></circle>
-                <circle cx="18" cy="16" r="3"></circle>
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
               </svg>
             </div>
-            <div class="stat-content">
-              <span class="stat-value">{{ stats.totalMinutesRead }}</span>
-              <span class="stat-label">阅读分钟</span>
+            <div class="stat-info">
+              <div class="stat-val-row">
+                <span class="stat-value">{{ stats.totalBooks }}</span>
+                <span class="stat-unit">本</span>
+              </div>
+              <p class="stat-label">累计书籍</p>
             </div>
           </div>
+
           <div class="stat-card">
-            <div class="stat-icon-wrap stat-icon-2">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-              </svg>
-            </div>
-            <div class="stat-content">
-              <span class="stat-value">{{ stats.totalBooksRead }}</span>
-              <span class="stat-label">读完书籍</span>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon-wrap stat-icon-3">
+            <div class="stat-icon grad-rose">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <polyline points="12 6 12 12 16 14"></polyline>
               </svg>
             </div>
-            <div class="stat-content">
-              <span class="stat-value">{{ stats.avgMinutesPerDay }}</span>
-              <span class="stat-label">日均分钟</span>
+            <div class="stat-info">
+              <div class="stat-val-row">
+                <span class="stat-value">{{ stats.monthHours }}</span>
+                <span class="stat-unit">分钟</span>
+              </div>
+              <p class="stat-label">{{ durationLabel }}</p>
             </div>
           </div>
+
           <div class="stat-card">
-            <div class="stat-icon-wrap stat-icon-4">
+            <div class="stat-icon grad-emerald">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 20V10M8 20V4M3 4h18M4 20h16"></path>
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
               </svg>
             </div>
-            <div class="stat-content">
-              <span class="stat-value">{{ stats.continuousDays }}</span>
-              <span class="stat-label">连续阅读天数</span>
+            <div class="stat-info">
+              <div class="stat-val-row">
+                <span class="stat-value">{{ stats.totalNotes }}</span>
+                <span class="stat-unit">条</span>
+              </div>
+              <p class="stat-label">总笔记数</p>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon grad-amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path>
+              </svg>
+            </div>
+            <div class="stat-info">
+              <div class="stat-val-row">
+                <span class="stat-value">{{ stats.continuousDays }}</span>
+                <span class="stat-unit">天</span>
+              </div>
+              <p class="stat-label">连续阅读</p>
             </div>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"></path>
-                <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-              </svg>
-              <span>阅读时段热力图</span>
-            </div>
-            <span class="section-subtitle">最近7天的阅读分布</span>
-          </div>
-          
-          <div class="heatmap-container">
-            <div class="heatmap-labels">
-              <span>24:00</span>
-              <span>12:00</span>
-              <span>00:00</span>
-            </div>
-            <div class="heatmap-grid">
+        <!-- Charts Row -->
+        <div class="charts-row">
+          <!-- Weekly Bar Chart -->
+          <div class="chart-card chart-wide">
+            <h3 class="chart-title">本周每日阅读时长</h3>
+            <p class="chart-subtitle">单位：分钟</p>
+            <div class="bar-chart">
               <div
-                v-for="(day, dayIndex) in heatmapData"
-                :key="dayIndex"
-                class="heatmap-column"
+                v-for="(d, i) in weeklyData"
+                :key="i"
+                class="bar-col"
               >
-                <div class="day-label">{{ dayLabels[dayIndex] }}</div>
-                <div
-                  v-for="(hour, hourIndex) in day"
-                  :key="hourIndex"
-                  class="heatmap-cell"
-                  :class="getHeatLevel(hour)"
-                  :title="formatHeatmapTitle(dayIndex, hourIndex, hour)"
-                ></div>
+                <div class="bar-wrap">
+                  <div
+                    class="bar-fill"
+                    :style="{ height: barHeight(d.minutes) + '%' }"
+                  >
+                    <span class="bar-tip">{{ d.minutes }} 分钟</span>
+                  </div>
+                </div>
+                <span class="bar-day">{{ d.day }}</span>
               </div>
             </div>
-            <div class="heatmap-legend">
-              <span>少</span>
-              <div class="legend-cell level-0"></div>
-              <div class="legend-cell level-1"></div>
-              <div class="legend-cell level-2"></div>
-              <div class="legend-cell level-3"></div>
-              <div class="legend-cell level-4"></div>
-              <span>多</span>
-            </div>
           </div>
-        </div>
 
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+          <!-- Category Donut / List -->
+          <div class="chart-card chart-narrow">
+            <h3 class="chart-title">阅读分类</h3>
+            <p class="chart-subtitle">书籍类型分布</p>
+            <div class="donut-wrap">
+              <svg viewBox="0 0 120 120" class="donut-svg">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#f3f4f6" stroke-width="18" />
+                <template v-for="(seg) in donutSegments" :key="seg.color">
+                  <circle
+                    cx="60" cy="60" r="50"
+                    fill="none"
+                    :stroke="seg.color"
+                    stroke-width="18"
+                    :stroke-dasharray="`${seg.len} ${314 - seg.len}`"
+                    :stroke-dashoffset="-seg.offset"
+                    transform="rotate(-90 60 60)"
+                    class="donut-seg"
+                  />
+                </template>
               </svg>
-              <span>阅读偏好</span>
             </div>
-            <span class="section-subtitle">书籍分类分布</span>
-          </div>
-          
-          <div class="preference-grid">
-            <div
-              v-for="category in categoryStats"
-              :key="category.name"
-              class="preference-item"
-            >
-              <div class="preference-header">
-                <span class="preference-name">{{ category.name }}</span>
-                <span class="preference-percent">{{ category.percentage }}%</span>
-              </div>
-              <div class="preference-bar">
-                <div
-                  class="preference-fill"
-                  :style="{ width: category.percentage + '%', background: category.color }"
-                ></div>
-              </div>
-              <span class="preference-count">{{ category.count }} 本书</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              <span>作者偏好</span>
-            </div>
-            <span class="section-subtitle">最爱读的作者</span>
-          </div>
-          
-          <div class="author-list">
-            <div
-              v-for="(author, index) in authorStats"
-              :key="author.name"
-              class="author-item"
-            >
-              <div class="author-rank" :class="getRankingClass(index)">
-                {{ index + 1 }}
-              </div>
-              <div class="author-info">
-                <h4>{{ author.name }}</h4>
-                <p>{{ author.count }} 本书 · {{ author.totalMinutes }} 分钟</p>
-              </div>
-              <div class="author-bar">
-                <div
-                  class="author-fill"
-                  :style="{ width: (author.count / maxAuthorCount * 100) + '%' }"
-                ></div>
+            <div class="cat-list">
+              <div v-for="cat in categoryData" :key="cat.name" class="cat-item">
+                <div class="cat-left">
+                  <span class="cat-dot" :style="{ background: cat.color }"></span>
+                  <span class="cat-name">{{ cat.name }}</span>
+                </div>
+                <div class="cat-right">
+                  <div class="cat-bar-track">
+                    <div class="cat-bar-fill" :style="{ width: cat.value + '%', background: cat.color }"></div>
+                  </div>
+                  <span class="cat-pct">{{ cat.value }}%</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 12 14.01l-3-3"></polyline>
-                <circle cx="12" cy="12" r="10"></circle>
-              </svg>
-              <span>本周阅读</span>
+        <!-- Heatmap -->
+        <div class="heatmap-card">
+          <div class="heatmap-head">
+            <div>
+              <h3 class="heatmap-title">阅读热力图</h3>
+              <p class="heatmap-subtitle">过去 {{ heatmapWeeks.length }} 周每日阅读记录</p>
             </div>
-            <span class="section-subtitle">最近7天的阅读时长</span>
+            <div class="legend-row">
+              <span class="legend-text">少</span>
+              <div v-for="(l, i) in legendLevels" :key="i" :class="['legend-dot', l]"></div>
+              <span class="legend-text">多</span>
+            </div>
           </div>
-          
-          <div class="weekly-chart">
-            <div
-              v-for="(day, index) in weeklyData"
-              :key="index"
-              class="chart-bar-wrapper"
-            >
-              <div class="chart-bar" :style="{ height: (day.minutes / maxWeeklyMinutes * 100) + '%' }">
-                <span class="bar-tooltip">{{ day.minutes }}分钟</span>
+          <div class="heatmap-scroll">
+            <div class="heatmap-grid">
+              <div v-for="(week, wi) in heatmapWeeks" :key="wi" class="hm-week">
+                <div
+                  v-for="(day, di) in week.days"
+                  :key="di"
+                  :class="['hm-cell', heatClass(day)]"
+                  :title="heatTitle(day)"
+                ></div>
               </div>
-              <span class="chart-label">{{ dayLabels[index] }}</span>
+            </div>
+          </div>
+          <div class="heatmap-foot">
+            <div v-for="item in footStats" :key="item.label" class="foot-stat">
+              <p class="foot-val">{{ item.value }}</p>
+              <p class="foot-label">{{ item.label }}</p>
             </div>
           </div>
         </div>
@@ -221,86 +212,253 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { wereadApi } from '@/api/weread'
-import NavBar from '@/components/NavBar.vue'
+import type { ReadDataResponse } from '@/api/weread'
 
 const loading = ref(true)
 const error = ref('')
 
-const stats = ref({
-  totalMinutesRead: 0,
-  totalBooksRead: 0,
-  avgMinutesPerDay: 0,
-  continuousDays: 0
+type PeriodMode = 'weekly' | 'monthly' | 'annually' | 'overall'
+
+const selectedMode = ref<PeriodMode>('monthly')
+const selectedMonth = ref<{ year: number; month: number } | null>(null)
+
+const periodTabs = [
+  { mode: 'weekly' as const, label: '本周' },
+  { mode: 'monthly' as const, label: '本月' },
+  { mode: 'annually' as const, label: '本年' },
+  { mode: 'overall' as const, label: '总计' },
+]
+
+const now = new Date()
+const currentYear = now.getFullYear()
+const currentMonthNum = now.getMonth() + 1
+
+const showMonthPicker = computed(() => selectedMonth.value !== null)
+
+const monthLabel = computed(() => {
+  if (!selectedMonth.value) return ''
+  return `${selectedMonth.value.year}年${selectedMonth.value.month}月`
 })
 
-const heatmapData = ref<number[][]>([])
+const isCurrentMonth = computed(() => {
+  if (!selectedMonth.value) return false
+  return selectedMonth.value.year === currentYear && selectedMonth.value.month === currentMonthNum
+})
+
+const isFirstMonth = computed(() => {
+  if (!selectedMonth.value) return false
+  return selectedMonth.value.month === 1
+})
+
+const periodLabel = computed(() => {
+  if (selectedMonth.value) return `${selectedMonth.value.year}年${selectedMonth.value.month}月`
+  const tab = periodTabs.find(t => t.mode === selectedMode.value)
+  return tab?.label || ''
+})
+
+const durationLabel = computed(() => {
+  if (selectedMode.value === 'weekly') return '本周时长'
+  if (selectedMode.value === 'annually') return '本年时长'
+  if (selectedMode.value === 'overall') return '总阅读时长'
+  if (selectedMonth.value) return `${selectedMonth.value.month}月时长`
+  return '本月时长'
+})
+
+interface StatCard {
+  totalBooks: number
+  monthHours: number
+  totalNotes: number
+  continuousDays: number
+  avgMinutes: number
+}
+
+const stats = ref<StatCard>({
+  totalBooks: 0,
+  monthHours: 0,
+  totalNotes: 0,
+  continuousDays: 0,
+  avgMinutes: 0,
+})
+
+const selectPeriod = (mode: PeriodMode) => {
+  selectedMode.value = mode
+  selectedMonth.value = null
+  loadStats()
+}
+
+const shiftMonth = (delta: number) => {
+  if (!selectedMonth.value) return
+  const { year, month } = selectedMonth.value
+  let newMonth = month + delta
+  let newYear = year
+  if (newMonth > 12) { newMonth = 1; newYear++ }
+  if (newMonth < 1) { newMonth = 12; newYear-- }
+  selectedMonth.value = { year: newYear, month: newMonth }
+  loadStats()
+}
+
 const weeklyData = ref<{ day: string; minutes: number }[]>([])
 
-const dayLabels = ['一', '二', '三', '四', '五', '六', '日']
+const maxWeeklyMin = computed(() => Math.max(...weeklyData.value.map(d => d.minutes), 1))
 
-const categoryStats = ref([
-  { name: '小说', count: 12, percentage: 35, color: 'linear-gradient(135deg, #667eea, #764ba2)' },
-  { name: '科技', count: 8, percentage: 23, color: 'linear-gradient(135deg, #11998e, #38ef7d)' },
-  { name: '经管', count: 6, percentage: 17, color: 'linear-gradient(135deg, #eb3349, #f45c43)' },
-  { name: '文学', count: 5, percentage: 15, color: 'linear-gradient(135deg, #f093fb, #f5576c)' },
-  { name: '历史', count: 3, percentage: 10, color: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
+const barHeight = (min: number): number => {
+  if (maxWeeklyMin.value === 0) return 0
+  return Math.round((min / maxWeeklyMin.value) * 100)
+}
+
+interface CategoryItem {
+  name: string
+  value: number
+  color: string
+}
+
+const categoryColors = ['#667eea', '#11998e', '#eb3349', '#f093fb', '#4facfe', '#8b5cf6', '#06b6d4', '#84cc16']
+const categoryData = ref<CategoryItem[]>([])
+
+interface HeatDay {
+  date: Date
+  minutes: number
+}
+
+interface HeatWeek {
+  days: HeatDay[]
+}
+
+const heatmapWeeks = ref<HeatWeek[]>([])
+const totalReadDays = ref(0)
+const longestStreak = ref(0)
+
+const footStats = computed(() => [
+  { label: '总阅读天数', value: `${totalReadDays.value} 天` },
+  { label: '最长连续', value: `${longestStreak.value} 天` },
+  { label: '日均时长', value: `${stats.value.avgMinutes || 0} 分钟` },
 ])
 
-const authorStats = ref([
-  { name: '刘慈欣', count: 3, totalMinutes: 1200 },
-  { name: '余华', count: 2, totalMinutes: 800 },
-  { name: '东野圭吾', count: 2, totalMinutes: 600 },
-  { name: '村上春树', count: 2, totalMinutes: 500 },
-  { name: '莫言', count: 1, totalMinutes: 400 },
-])
+const donutSegments = computed(() => {
+  const circumference = 314
+  let offset = 0
+  return categoryData.value.map(cat => {
+    const len = Math.round((cat.value / 100) * circumference)
+    const seg = { color: cat.color, len, offset }
+    offset += len
+    return seg
+  })
+})
 
-const maxAuthorCount = computed(() => Math.max(...authorStats.value.map(a => a.count)))
-const maxWeeklyMinutes = computed(() => Math.max(...weeklyData.value.map(d => d.minutes), 1))
+const legendLevels = ['lv0', 'lv1', 'lv2', 'lv3', 'lv4']
 
-const getHeatLevel = (value: number): string => {
-  if (value === 0) return 'level-0'
-  if (value < 15) return 'level-1'
-  if (value < 30) return 'level-2'
-  if (value < 60) return 'level-3'
-  return 'level-4'
+const heatClass = (day: HeatDay): string => {
+  if (day.minutes === 0) return 'lv0'
+  if (day.minutes < 20) return 'lv1'
+  if (day.minutes < 45) return 'lv2'
+  if (day.minutes < 70) return 'lv3'
+  return 'lv4'
 }
 
-const formatHeatmapTitle = (dayIndex: number, hourIndex: number, minutes: number): string => {
-  const day = dayLabels[dayIndex]
-  const hour = hourIndex.toString().padStart(2, '0')
-  return `${day} ${hour}:00 - ${minutes}分钟`
+const heatTitle = (day: HeatDay): string => {
+  const d = day.date
+  const m = d.getMonth() + 1
+  const dd = d.getDate()
+  return `${m}/${dd} · ${day.minutes} 分钟`
 }
 
-const getRankingClass = (index: number): string => {
-  if (index === 0) return 'rank-1'
-  if (index === 1) return 'rank-2'
-  if (index === 2) return 'rank-3'
-  return ''
+const parseReadStatCount = (counts: string | undefined): number => {
+  if (!counts) return 0
+  const match = counts.match(/(\d+)/)
+  return match ? parseInt(match[1], 10) : 0
 }
 
-const generateMockHeatmapData = (): number[][] => {
-  const data: number[][] = []
-  for (let i = 0; i < 7; i++) {
-    const dayData: number[] = []
-    for (let j = 0; j < 24; j++) {
-      if ((j >= 8 && j <= 12) || (j >= 19 && j <= 22)) {
-        dayData.push(Math.floor(Math.random() * 60) + 10)
-      } else if ((j >= 13 && j <= 14) || (j >= 23)) {
-        dayData.push(Math.floor(Math.random() * 30))
-      } else {
-        dayData.push(0)
+const generateHeatmapFromDailyData = (dailyReadTimes?: Record<string, number>, readTimes?: Record<string, number>): void => {
+  const weeks: HeatWeek[] = []
+  const now = new Date()
+  let realReadDays = 0
+  const timeData = dailyReadTimes || readTimes
+
+  for (let w = 15; w >= 0; w--) {
+    const days: HeatDay[] = []
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(now)
+      date.setDate(date.getDate() - (w * 7 + (6 - d)))
+      date.setHours(0, 0, 0, 0)
+      const ts = Math.floor(date.getTime() / 1000)
+      let minutes = 0
+
+      if (timeData && timeData[ts]) {
+        minutes = Math.round(timeData[ts] / 60)
+        if (minutes > 0) realReadDays++
       }
+
+      days.push({ date, minutes })
     }
-    data.push(dayData)
+    weeks.push({ days })
   }
-  return data
+
+  heatmapWeeks.value = weeks
+  totalReadDays.value = realReadDays
+
+  let maxStreak = 0
+  let curStreak = 0
+  weeks.forEach(w => w.days.forEach(d => {
+    if (d.minutes > 0) { curStreak++; maxStreak = Math.max(maxStreak, curStreak) }
+    else { curStreak = 0 }
+  }))
+  longestStreak.value = maxStreak || 0
 }
 
-const generateMockWeeklyData = (): { day: string; minutes: number }[] => {
-  return dayLabels.map(day => ({
-    day,
-    minutes: Math.floor(Math.random() * 120) + 30
-  }))
+const generateWeeklyFromReadTimes = (readTimes: Record<string, number>): void => {
+  const dayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+  const sortedEntries = Object.entries(readTimes).sort(([a], [b]) => parseInt(a) - parseInt(b))
+
+  weeklyData.value = sortedEntries.map(([ts, seconds]) => {
+    const date = new Date(parseInt(ts) * 1000)
+    return {
+      day: dayNames[date.getDay()],
+      minutes: Math.round(seconds / 60),
+    }
+  })
+}
+
+const loadPeriodData = async (mode: PeriodMode, baseTime?: number): Promise<ReadDataResponse | null> => {
+  try {
+    const response = await wereadApi.readdata(mode, baseTime)
+    if (response.code === 0) {
+      return response.data
+    }
+  } catch (e) {
+    console.error('获取统计数据失败', e)
+  }
+  return null
+}
+
+const getBaseTime = (): number | undefined => {
+  if (!selectedMonth.value) return undefined
+  const { year, month } = selectedMonth.value
+  return Math.floor(new Date(year, month - 1, 1).getTime() / 1000)
+}
+
+const processStats = (data: ReadDataResponse): void => {
+  const readBooksStat = data.readStat?.find(s => s.stat === '读过')
+  const finishBooksStat = data.readStat?.find(s => s.stat === '读完')
+  const notesStat = data.readStat?.find(s => s.stat === '笔记')
+
+  stats.value = {
+    totalBooks: parseReadStatCount(readBooksStat?.counts) || parseReadStatCount(finishBooksStat?.counts) || data.readLongest?.length || 0,
+    monthHours: Math.round(data.totalReadTime / 60) || 0,
+    totalNotes: parseReadStatCount(notesStat?.counts) || 0,
+    continuousDays: data.readDays || 0,
+    avgMinutes: Math.round(data.dayAverageReadTime / 60) || 0,
+  }
+
+  if (data.preferCategory && data.preferCategory.length > 0) {
+    const totalVal = data.preferCategory.reduce((sum, c) => sum + (c.val || 0), 0)
+    categoryData.value = data.preferCategory.slice(0, 8).map((cat, idx) => ({
+      name: cat.categoryTitle || cat.parentCategoryTitle || '其他',
+      value: totalVal > 0 ? Math.round((cat.val || 0) / totalVal * 100) : 0,
+      color: categoryColors[idx % categoryColors.length],
+    }))
+  }
+
+  generateHeatmapFromDailyData(data.dailyReadTimes, data.readTimes)
 }
 
 const loadStats = async () => {
@@ -308,20 +466,30 @@ const loadStats = async () => {
   error.value = ''
 
   try {
-    const response = await wereadApi.readdata('monthly')
-    if (response.code === 0) {
-      const data = response.data
-      stats.value = {
-        totalMinutesRead: Math.floor(data.totalReadTime / 60) || 0,
-        totalBooksRead: data.readLongest?.length || 0,
-        avgMinutesPerDay: Math.floor(data.dayAverageReadTime / 60) || 0,
-        continuousDays: data.readDays || 0
-      }
+    const baseTime = getBaseTime()
+    const mode = selectedMode.value
+    const [mainData, weeklyRes] = await Promise.all([
+      loadPeriodData(mode, baseTime),
+      mode === 'weekly' ? null : loadPeriodData('weekly'),
+    ])
+
+    if (mainData) {
+      processStats(mainData)
     } else {
-      error.value = response.msg || '获取统计数据失败'
+      error.value = '无法获取阅读统计数据'
+    }
+
+    if (mode === 'weekly' && mainData?.readTimes) {
+      generateWeeklyFromReadTimes(mainData.readTimes)
+    } else if (weeklyRes && weeklyRes.readTimes) {
+      generateWeeklyFromReadTimes(weeklyRes.readTimes)
+    } else {
+      const labels = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+      weeklyData.value = labels.map(day => ({ day, minutes: 0 }))
     }
   } catch (e) {
-    error.value = '网络错误，请稍后重试'
+    console.error(e)
+    error.value = '加载统计数据失败'
   } finally {
     loading.value = false
   }
@@ -329,423 +497,495 @@ const loadStats = async () => {
 
 onMounted(() => {
   loadStats()
-  heatmapData.value = generateMockHeatmapData()
-  weeklyData.value = generateMockWeeklyData()
 })
 </script>
 
 <style scoped>
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--spacing-lg);
-  margin-top: var(--spacing-xl);
+.page-container {
+  min-height: 100%;
 }
 
-.stat-card {
+.page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e1b4b;
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.period-selector {
   display: flex;
   align-items: center;
-  gap: var(--spacing-lg);
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
-  transition: all var(--transition-normal);
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
+.period-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(243, 244, 246, 0.8);
+  padding: 3px;
+  border-radius: 10px;
 }
 
-.stat-icon-wrap {
-  width: 56px;
-  height: 56px;
+.period-tab {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.period-tab:hover {
+  color: #374151;
+}
+
+.period-tab.active {
+  color: #fff;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  box-shadow: 0 1px 3px rgba(102, 126, 234, 0.3);
+}
+
+.month-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(243, 244, 246, 0.8);
+  padding: 4px 8px;
+  border-radius: 10px;
+}
+
+.month-btn {
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-lg);
-  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 150ms;
 }
 
-.stat-icon-1 {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-  color: var(--color-primary-start);
+.month-btn:hover:not(:disabled) {
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
 }
 
-.stat-icon-2 {
-  background: linear-gradient(135deg, rgba(17, 153, 142, 0.1), rgba(56, 239, 125, 0.1));
-  color: #11998e;
+.month-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
-.stat-icon-3 {
-  background: linear-gradient(135deg, rgba(234, 51, 73, 0.1), rgba(244, 92, 67, 0.1));
-  color: #eb3349;
+.month-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
-.stat-icon-4 {
-  background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1));
-  color: #4facfe;
+.month-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  min-width: 80px;
+  text-align: center;
 }
 
-.stat-icon-wrap svg {
-  width: 24px;
-  height: 24px;
+.space-y-5 > * + * {
+  margin-top: 20px;
 }
 
-.stat-content {
+/* ── Stat Cards ── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.stat-icon svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+.grad-purple {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+.grad-rose {
+  background: linear-gradient(135deg, #fb7185, #db2777);
+}
+.grad-emerald {
+  background: linear-gradient(135deg, #34d399, #0d9488);
+}
+.grad-amber {
+  background: linear-gradient(135deg, #fbbf24, #f97316);
+}
+
+.stat-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-val-row {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
 }
 
 .stat-value {
-  font-size: var(--font-size-2xl);
+  font-size: 20px;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: #1e1b4b;
   line-height: 1.2;
 }
 
+.stat-unit {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
 .stat-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  margin-top: 4px;
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 2px 0 0 0;
 }
 
-.section {
-  margin-top: var(--spacing-2xl);
+/* ── Charts Row ── */
+.charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
 }
 
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-lg);
+.chart-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-lg);
+.chart-title {
+  font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: #1e1b4b;
+  margin: 0 0 2px 0;
 }
 
-.section-title svg {
-  width: 22px;
-  height: 22px;
-  color: var(--color-primary-start);
+.chart-subtitle {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0 0 20px 0;
 }
 
-.section-subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.heatmap-container {
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
-}
-
-.heatmap-labels {
+/* Bar Chart */
+.bar-chart {
   display: flex;
   justify-content: space-between;
-  padding: 0 var(--spacing-md);
-  margin-bottom: var(--spacing-xs);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  align-items: flex-end;
+  height: 180px;
+  padding-top: 8px;
+}
+
+.bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.bar-wrap {
+  width: 28px;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  position: relative;
+}
+
+.bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, #667eea, #764ba2);
+  border-radius: 8px 8px 0 0;
+  min-height: 4px;
+  transition: height 300ms ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.bar-fill:hover {
+  opacity: 0.88;
+}
+
+.bar-fill:hover .bar-tip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-6px);
+}
+
+.bar-tip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e1b4b;
+  color: white;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: all 150ms;
+  pointer-events: none;
+  margin-bottom: 6px;
+}
+
+.bar-day {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 8px;
+}
+
+/* Category Donut */
+.donut-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.donut-svg {
+  width: 120px;
+  height: 120px;
+}
+
+.donut-seg {
+  transition: opacity 200ms;
+}
+.donut-seg:hover {
+  opacity: 0.75;
+}
+
+.cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cat-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cat-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cat-name {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.cat-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.cat-bar-track {
+  width: 64px;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.cat-bar-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 400ms ease;
+}
+
+.cat-pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e1b4b;
+  width: 26px;
+  text-align: right;
+}
+
+/* ── Heatmap Card ── */
+.heatmap-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.heatmap-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.heatmap-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e1b4b;
+  margin: 0 0 2px 0;
+}
+
+.heatmap-subtitle {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-text {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.legend-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.lv0 { background: #f3f4f6; }
+.lv1 { background: rgba(102, 126, 234, 0.2); }
+.lv2 { background: rgba(102, 126, 234, 0.4); }
+.lv3 { background: rgba(102, 126, 234, 0.65); }
+.lv4 { background: #667eea; }
+
+.heatmap-scroll {
+  overflow-x: auto;
+  margin-bottom: 16px;
 }
 
 .heatmap-grid {
   display: flex;
   gap: 4px;
+  min-width: max-content;
 }
 
-.heatmap-column {
+.hm-week {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 3px;
 }
 
-.day-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  margin-bottom: 4px;
-  height: 18px;
+.hm-cell {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  cursor: default;
+  transition: all 150ms;
 }
 
-.heatmap-cell {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  margin-bottom: 2px;
-  cursor: pointer;
-  transition: transform var(--transition-fast);
+.hm-cell:hover {
+  ring: 1px solid rgba(102, 126, 234, 0.4);
+  box-shadow: 0 0 0 1px rgba(102, 126, 234, 0.35);
 }
 
-.heatmap-cell:hover {
-  transform: scale(1.5);
-  z-index: 10;
-}
-
-.heatmap-cell.level-0 {
-  background: var(--color-bg-tertiary);
-}
-
-.heatmap-cell.level-1 {
-  background: rgba(102, 126, 234, 0.25);
-}
-
-.heatmap-cell.level-2 {
-  background: rgba(102, 126, 234, 0.5);
-}
-
-.heatmap-cell.level-3 {
-  background: rgba(102, 126, 234, 0.75);
-}
-
-.heatmap-cell.level-4 {
-  background: var(--color-primary-start);
-}
-
-.heatmap-legend {
+.heatmap-foot {
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  margin-top: var(--spacing-md);
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  gap: 48px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
 }
 
-.legend-cell {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-}
-
-.preference-grid {
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
-}
-
-.preference-item {
-  margin-bottom: var(--spacing-lg);
-}
-
-.preference-item:last-child {
-  margin-bottom: 0;
-}
-
-.preference-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: var(--spacing-sm);
-}
-
-.preference-name {
-  font-size: var(--font-size-sm);
-  font-weight: 500;
-  color: var(--color-text-primary);
-}
-
-.preference-percent {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-primary-start);
-}
-
-.preference-bar {
-  height: 8px;
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-full);
-  overflow: hidden;
-}
-
-.preference-fill {
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition: width var(--transition-normal);
-}
-
-.preference-count {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  margin-top: 4px;
-}
-
-.author-list {
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-md);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
-}
-
-.author-item {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
-  transition: background var(--transition-fast);
-}
-
-.author-item:hover {
-  background: var(--color-bg-tertiary);
-}
-
-.author-rank {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-sm);
-  font-weight: 700;
-  color: var(--color-text-muted);
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-md);
-  flex-shrink: 0;
-}
-
-.author-rank.rank-1 {
-  background: linear-gradient(135deg, #FFD700, #FFA500);
-  color: white;
-}
-
-.author-rank.rank-2 {
-  background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
-  color: white;
-}
-
-.author-rank.rank-3 {
-  background: linear-gradient(135deg, #CD7F32, #B87333);
-  color: white;
-}
-
-.author-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.author-info h4 {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 2px 0;
-}
-
-.author-info p {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+.foot-stat p {
   margin: 0;
 }
 
-.author-bar {
-  width: 100px;
-  height: 6px;
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-full);
-  overflow: hidden;
+.foot-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e1b4b;
 }
 
-.author-fill {
-  height: 100%;
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-full);
-  transition: width var(--transition-normal);
+.foot-label {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px !important;
 }
 
-.weekly-chart {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-xl) var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
-  height: 200px;
-}
-
-.chart-bar-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  height: 100%;
-  justify-content: flex-end;
-}
-
-.chart-bar {
-  width: 32px;
-  background: var(--color-primary-gradient);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-  position: relative;
-  transition: height var(--transition-normal);
-  cursor: pointer;
-}
-
-.chart-bar:hover {
-  opacity: 0.8;
-}
-
-.chart-bar:hover .bar-tooltip {
-  opacity: 1;
-  transform: translateX(-50%) translateY(-8px);
-}
-
-.bar-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--color-text-primary);
-  color: white;
-  font-size: var(--font-size-xs);
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-  white-space: nowrap;
-  opacity: 0;
-  transition: all var(--transition-fast);
-  margin-bottom: 8px;
-}
-
-.bar-tooltip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-top-color: var(--color-text-primary);
-}
-
-.chart-label {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  margin-top: var(--spacing-sm);
-}
-
-.spinner-container {
+/* ── Spinner / Error ── */
+.spinner-wrap {
   display: flex;
   justify-content: center;
-  padding: var(--spacing-3xl);
+  padding: 64px 20px;
 }
 
 .spinner {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border: 3px solid rgba(102, 126, 234, 0.1);
-  border-top-color: var(--color-primary-start);
+  border-top-color: #667eea;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -754,51 +994,55 @@ onMounted(() => {
   to { transform: rotate(360deg); }
 }
 
-.error-state {
+.error-wrap {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--spacing-3xl);
-  color: var(--color-error);
+  padding: 64px 20px;
+  text-align: center;
 }
 
-.error-state svg {
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--spacing-md);
-  opacity: 0.5;
+.error-wrap svg {
+  width: 40px;
+  height: 40px;
+  color: #d1d5db;
+  margin-bottom: 12px;
 }
 
-.error-state p {
+.error-wrap p {
+  font-size: 14px;
+  color: #9ca3af;
   margin: 0;
-  font-size: var(--font-size-base);
 }
 
-@media (max-width: 768px) {
-  .stats-cards {
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  
-  .stat-card {
+}
+
+@media (max-width: 480px) {
+  .page-header {
     flex-direction: column;
-    text-align: center;
+    gap: 4px;
   }
-  
-  .stat-value {
-    font-size: var(--font-size-xl);
+
+  .stat-grid {
+    grid-template-columns: 1fr;
   }
-  
-  .heatmap-cell {
-    width: 10px;
-    height: 10px;
+
+  .heatmap-foot {
+    flex-wrap: wrap;
+    gap: 24px;
   }
-  
-  .author-bar {
-    display: none;
-  }
-  
-  .chart-bar {
-    width: 20px;
+
+  .bar-chart {
+    height: 140px;
   }
 }
 </style>

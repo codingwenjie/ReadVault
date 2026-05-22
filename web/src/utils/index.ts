@@ -65,6 +65,54 @@ export function generateMarkdown(bookmarks: { chapterUid: number; markText: stri
   return markdown
 }
 
+export function generateTxt(bookmarks: { chapterUid: number; markText: string; createTime: number }[], 
+                            reviews: { chapterName: string; content: string; createTime: number }[],
+                            chapters: { chapterUid: number; title: string }[],
+                            bookTitle: string, bookAuthor: string): string {
+  let txt = `${bookTitle}\n`
+  txt += `作者：${bookAuthor}\n`
+  txt += '='.repeat(40) + '\n\n'
+  
+  const chapterMap = new Map<number, string>()
+  chapters.forEach(chapter => {
+    chapterMap.set(chapter.chapterUid, chapter.title)
+  })
+
+  const bookmarksByChapter = new Map<number, typeof bookmarks>()
+  bookmarks.forEach(bookmark => {
+    if (!bookmarksByChapter.has(bookmark.chapterUid)) {
+      bookmarksByChapter.set(bookmark.chapterUid, [])
+    }
+    bookmarksByChapter.get(bookmark.chapterUid)?.push(bookmark)
+  })
+
+  bookmarksByChapter.forEach((items, chapterUid) => {
+    const chapterTitle = chapterMap.get(chapterUid) || `章节 ${chapterUid}`
+    txt += `${chapterTitle}\n`
+    txt += '-'.repeat(20) + '\n'
+    
+    items.forEach((item, index) => {
+      txt += `${index + 1}. ${item.markText}\n\n`
+    })
+  })
+
+  if (reviews.length > 0) {
+    txt += '='.repeat(40) + '\n'
+    txt += '我的想法\n'
+    txt += '='.repeat(40) + '\n\n'
+    reviews.forEach(review => {
+      if (review.chapterName) {
+        txt += `${review.chapterName}\n`
+        txt += '-'.repeat(20) + '\n'
+      }
+      txt += `${review.content}\n\n`
+      txt += '-'.repeat(30) + '\n\n'
+    })
+  }
+
+  return txt
+}
+
 export function downloadFile(content: string, filename: string, type: string = 'text/markdown') {
   const blob = new Blob([content], { type })
   const url = URL.createObjectURL(blob)

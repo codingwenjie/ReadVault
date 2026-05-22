@@ -1,11 +1,9 @@
 <template>
   <div class="page-container">
-    <NavBar />
-    
     <div class="page-content">
       <div class="page-header">
         <h1 class="page-title">发现好书</h1>
-        <p class="page-subtitle">探索精选内容，发现你的下一本好书</p>
+        <p class="page-subtitle">为你精选推荐</p>
       </div>
 
       <div v-if="loading" class="spinner-container">
@@ -21,117 +19,96 @@
         <p>{{ error }}</p>
       </div>
 
-      <div v-else>
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-              </svg>
-              <span>为你推荐</span>
+      <div v-else class="discover-content">
+        <!-- Featured Hero Card -->
+        <div v-if="featuredBook" class="featured-card">
+          <div class="featured-bg"></div>
+          <div class="featured-decor decor-1"></div>
+          <div class="featured-decor decor-2"></div>
+          <div class="featured-body">
+            <div class="featured-tags">
+              <span class="tag-editor">✦ 编辑精选</span>
+              <span class="tag-category">{{ featuredBook.category || '精选' }}</span>
             </div>
-            <button class="section-more" @click="loadRecommendations">
-              换一批
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="23 4 12 15 1 4"></polyline>
-              </svg>
-            </button>
-          </div>
-          
-          <div class="recommend-carousel">
-            <div
-              v-for="book in recommendations"
-              :key="book.bookId"
-              class="recommend-card"
-              @click="handleBookClick(book)"
-            >
-              <div class="recommend-cover-wrapper">
-                <img :src="book.cover" :alt="book.title" class="recommend-cover" />
-                <div class="recommend-overlay">
-                  <div class="recommend-rating">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                    </svg>
-                    {{ book.newRating ? book.newRating.toFixed(1) : '暂无评分' }}
-                  </div>
-                </div>
+            <h2 class="featured-title">{{ featuredBook.title }}</h2>
+            <p class="featured-author">{{ featuredBook.author }}</p>
+            <p class="featured-desc">{{ featuredBook.intro || '一本值得阅读的好书' }}</p>
+            <div class="featured-meta">
+              <div class="meta-rating">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                </svg>
+                <span>{{ featuredBook.newRating ? featuredBook.newRating.toFixed(1) : '--' }}</span>
               </div>
-              <div class="recommend-info">
-                <h3 class="recommend-title">{{ book.title }}</h3>
-                <p class="recommend-author">{{ book.author }}</p>
-                <p class="recommend-desc">{{ book.intro }}</p>
-              </div>
+              <span class="meta-readers">{{ formatReadCount(featuredBook.readingCount) }}人在读</span>
             </div>
+            <button class="btn-add-shelf">加入书架</button>
           </div>
         </div>
 
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
+        <!-- Two Column Layout -->
+        <div class="two-col-layout">
+          <!-- Hot Rankings (Left) -->
+          <div class="hot-section">
+            <div class="hot-header">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
               </svg>
-              <span>热门排行</span>
+              <h3>热门榜单</h3>
             </div>
-            <span class="section-subtitle">本周最受欢迎的书籍</span>
-          </div>
-          
-          <div class="ranking-list">
-            <div
-              v-for="(book, index) in hotBooks"
-              :key="book.bookId"
-              class="ranking-item"
-              @click="handleBookClick(book)"
-            >
-              <div class="ranking-badge" :class="getRankingClass(index)">
-                {{ index + 1 }}
-              </div>
-              <img :src="book.cover" :alt="book.title" class="ranking-cover" />
-              <div class="ranking-info">
-                <h3 class="ranking-title">{{ book.title }}</h3>
-                <p class="ranking-author">{{ book.author }}</p>
-                <div class="ranking-meta">
-                  <span class="ranking-category">{{ book.category }}</span>
-                  <span class="ranking-hot">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M12 8v4l3 3"></path>
-                      <circle cx="12" cy="12" r="10"></circle>
-                    </svg>
-                    {{ book.readingCount ? `${book.readingCount}人在读` : '热门' }}
-                  </span>
+            <div class="hot-list">
+              <div
+                v-for="(book, index) in hotBooks"
+                :key="book.bookId"
+                class="hot-item"
+                @click="handleBookClick(book)"
+              >
+                <span class="hot-rank" :class="getRankClass(index)">{{ index + 1 }}</span>
+                <div class="hot-info">
+                  <p class="hot-title">{{ book.title }}</p>
+                  <p class="hot-author">{{ book.author }}</p>
+                </div>
+                <div class="hot-heat">
+                  <div class="heat-bar"><div class="heat-fill" :style="{ width: getHeatPercent(index) + '%' }"></div></div>
+                  <span class="heat-value">{{ getHeatValue(index) }}</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="section">
-          <div class="section-header">
-            <div class="section-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M9 12l2 2 4-4"></path>
-                <circle cx="12" cy="12" r="10"></circle>
-              </svg>
-              <span>相似推荐</span>
-            </div>
-            <span class="section-subtitle">基于你的阅读偏好</span>
-          </div>
-          
-          <div class="similar-grid">
-            <div
-              v-for="similar in similarBooks"
-              :key="similar.book.bookInfo.bookId"
-              class="similar-card"
-              @click="handleBookClick(similar.book.bookInfo)"
-            >
-              <div class="similar-cover-wrapper">
-                <img :src="similar.book.bookInfo.cover" :alt="similar.book.bookInfo.title" class="similar-cover" />
-              </div>
-              <div class="similar-info">
-                <h3 class="similar-title">{{ similar.book.bookInfo.title }}</h3>
-                <p class="similar-author">{{ similar.book.bookInfo.author }}</p>
-                <div class="similar-tags">
-                  <span class="similar-tag">{{ similar.book.bookInfo.category }}</span>
+          <!-- Similar Recommendations (Right) -->
+          <div class="similar-section">
+            <h3 class="similar-header">相似推荐</h3>
+            <div class="similar-list">
+              <div
+                v-for="book in similarBooks"
+                :key="book.book.bookInfo?.bookId || String(book.idx)"
+                class="similar-item"
+                @click="handleSimilarClick(book)"
+              >
+                <img
+                  :src="book.book?.bookInfo?.cover"
+                  :alt="book.book?.bookInfo?.title"
+                  class="similar-cover"
+                />
+                <div class="similar-info">
+                  <div class="similar-top">
+                    <div>
+                      <h4 class="similar-title">{{ book.book?.bookInfo?.title }}</h4>
+                      <p class="similar-author">{{ book.book?.bookInfo?.author }}</p>
+                    </div>
+                    <span class="similar-tag">{{ book.book?.bookInfo?.category || '推荐' }}</span>
+                  </div>
+                  <p class="similar-desc">{{ book.book?.bookInfo?.intro || '' }}</p>
+                  <div class="similar-footer">
+                    <div class="similar-rating">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                      </svg>
+                      <span>--</span>
+                    </div>
+                    <button class="btn-add-sm">+ 加入书架</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -143,9 +120,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { wereadApi } from '@/api/weread'
-import NavBar from '@/components/NavBar.vue'
 import type { RecommendBook, SimilarBook } from '@/api/weread'
 
 const recommendations = ref<RecommendBook[]>([])
@@ -154,22 +130,27 @@ const similarBooks = ref<SimilarBook[]>([])
 const loading = ref(true)
 const error = ref('')
 
-const getRankingClass = (index: number): string => {
+const featuredBook = computed(() => recommendations.value[0] || null)
+
+const formatReadCount = (count?: number): string => {
+  if (!count) return ''
+  if (count >= 10000) return `${(count / 10000).toFixed(1)}万`
+  return `${count}`
+}
+
+const getRankClass = (index: number): string => {
   if (index === 0) return 'rank-1'
   if (index === 1) return 'rank-2'
   if (index === 2) return 'rank-3'
   return ''
 }
 
-const loadRecommendations = async () => {
-  try {
-    const response = await wereadApi.recommend(6)
-    if (response.code === 0) {
-      recommendations.value = response.data.books || []
-    }
-  } catch (e) {
-    console.error('加载推荐失败', e)
-  }
+const heatValues = [98, 95, 91, 88, 84]
+const getHeatPercent = (index: number): number => {
+  return heatValues[index] || 70
+}
+const getHeatValue = (index: number): number => {
+  return heatValues[index] || 70
 }
 
 const loadDiscover = async () => {
@@ -182,17 +163,28 @@ const loadDiscover = async () => {
     ])
 
     if (recommendRes.code === 0) {
-      recommendations.value = recommendRes.data.books || []
-      hotBooks.value = recommendRes.data.books?.slice(0, 5) || []
+      const books = recommendRes.data.books || []
+      recommendations.value = books
+      hotBooks.value = books.slice(0, 5)
+      similarBooks.value = []
     } else {
       error.value = recommendRes.msg || '获取发现内容失败'
     }
 
     if (recommendations.value.length > 0) {
-      const similarRes = await wereadApi.similar(recommendations.value[0].bookId, 6)
-      if (similarRes.code === 0) {
-        similarBooks.value = similarRes.data.booksimilar?.books || []
-      }
+      try {
+        const similarRes = await wereadApi.similar(recommendations.value[0].bookId, 6)
+        if (similarRes.code === 0) {
+          similarBooks.value = similarRes.data.booksimilar?.books || []
+        }
+      } catch (_) {}
+    }
+
+    if (similarBooks.value.length === 0 && hotBooks.value.length > 1) {
+      similarBooks.value = hotBooks.value.slice(1).map(b => ({
+        book: { bookInfo: b },
+        similarity: 80 - Math.random() * 30,
+      })) as unknown as SimilarBook[]
     }
   } catch (e) {
     error.value = '网络错误，请稍后重试'
@@ -205,348 +197,471 @@ const handleBookClick = (book: RecommendBook | { bookId: string; title: string }
   console.log('点击书籍:', book.title)
 }
 
+const handleSimilarClick = (book: SimilarBook) => {
+  const info = book.book?.bookInfo
+  console.log('点击相似书籍:', info?.title)
+}
+
 onMounted(() => {
   loadDiscover()
 })
 </script>
 
 <style scoped>
-.section {
-  margin-top: var(--spacing-2xl);
+.page-container {
+  min-height: 100%;
 }
 
-.section-header {
+.page-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: 20px;
 }
 
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  font-size: var(--font-size-lg);
+.page-title {
+  font-size: 20px;
   font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.section-title svg {
-  width: 22px;
-  height: 22px;
-  color: var(--color-primary-start);
-}
-
-.section-subtitle {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-}
-
-.section-more {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: var(--spacing-xs) var(--spacing-md);
-  font-size: var(--font-size-sm);
-  color: var(--color-primary-start);
-  background: var(--color-primary-glass);
-  border: none;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.section-more:hover {
-  background: var(--color-primary-start);
-  color: white;
-}
-
-.section-more svg {
-  width: 14px;
-  height: 14px;
-}
-
-.recommend-carousel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--spacing-lg);
-}
-
-.recommend-card {
-  display: flex;
-  gap: var(--spacing-lg);
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
-  cursor: pointer;
-  transition: all var(--transition-normal);
-}
-
-.recommend-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-md);
-}
-
-.recommend-cover-wrapper {
-  position: relative;
-  width: 120px;
-  flex-shrink: 0;
-}
-
-.recommend-cover {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-}
-
-.recommend-overlay {
-  position: absolute;
-  bottom: -8px;
-  left: -8px;
-  right: -8px;
-}
-
-.recommend-rating {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  background: var(--color-accent-gold-gradient);
-  color: white;
-  font-size: var(--font-size-xs);
-  font-weight: 600;
-  border-radius: var(--radius-full);
-  box-shadow: var(--shadow-sm);
-}
-
-.recommend-rating svg {
-  width: 12px;
-  height: 12px;
-}
-
-.recommend-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.recommend-title {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
-}
-
-.recommend-author {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin: 0 0 var(--spacing-md) 0;
-}
-
-.recommend-desc {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-muted);
-  line-height: 1.6;
+  color: #1e1b4b;
   margin: 0;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 2px 0 0 0;
+}
+
+/* ── Featured Hero Card ── */
+.featured-card {
+  position: relative;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #a78bfa 100%);
+  border-radius: 16px;
+  padding: 28px;
+  color: white;
+  overflow: hidden;
+  margin-bottom: 24px;
+  max-height: 280px;
+}
+
+.featured-bg {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.featured-decor {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.decor-1 {
+  top: -48px;
+  right: -48px;
+  width: 160px;
+  height: 160px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.decor-2 {
+  bottom: -32px;
+  left: -32px;
+  width: 96px;
+  height: 96px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.featured-body {
+  position: relative;
+  z-index: 1;
+}
+
+.featured-tags {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.tag-editor {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.tag-category {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.featured-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.featured-author {
+  font-size: 14px;
+  opacity: 0.75;
+  margin: 0 0 12px 0;
+}
+
+.featured-desc {
+  font-size: 14px;
+  line-height: 1.55;
+  opacity: 0.9;
+  max-width: 400px;
+  margin: 0 0 16px 0;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.ranking-list {
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-md);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
-}
-
-.ranking-item {
+.featured-meta {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  padding: var(--spacing-md);
-  border-radius: var(--radius-md);
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.meta-rating {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+}
+
+.meta-rating svg {
+  width: 16px;
+  height: 16px;
+  fill: #fcd34d;
+  stroke: #fcd34d;
+}
+
+.meta-readers {
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+.btn-add-shelf {
+  padding: 10px 24px;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 9999px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 150ms;
 }
 
-.ranking-item:hover {
-  background: var(--color-bg-tertiary);
+.btn-add-shelf:hover {
+  background: rgba(255, 255, 255, 0.92);
 }
 
-.ranking-badge {
-  width: 32px;
-  height: 32px;
+/* ── Two Column Layout ── */
+.two-col-layout {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 20px;
+}
+
+/* ── Hot Rankings (Left) ── */
+.hot-section {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+}
+
+.hot-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.hot-header svg {
+  width: 16px;
+  height: 16px;
+  color: #667eea;
+}
+
+.hot-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e1b4b;
+  margin: 0;
+}
+
+.hot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hot-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.hot-item:hover .hot-title {
+  color: #667eea;
+}
+
+.hot-rank {
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-base);
+  font-size: 12px;
   font-weight: 700;
-  color: var(--color-text-muted);
-  background: var(--color-bg-tertiary);
-  border-radius: var(--radius-md);
+  border-radius: 8px;
   flex-shrink: 0;
+  background: #f3f4f6;
+  color: #9ca3af;
 }
 
-.ranking-badge.rank-1 {
-  background: linear-gradient(135deg, #FFD700, #FFA500);
+.hot-rank.rank-1 {
+  background: linear-gradient(135deg, #667eea, #764ba2);
   color: white;
+  box-shadow: 0 1px 3px rgba(102, 126, 234, 0.3);
 }
 
-.ranking-badge.rank-2 {
-  background: linear-gradient(135deg, #C0C0C0, #A0A0A0);
-  color: white;
+.hot-rank.rank-2 {
+  background: #e5e7eb;
+  color: #6b7280;
 }
 
-.ranking-badge.rank-3 {
-  background: linear-gradient(135deg, #CD7F32, #B87333);
-  color: white;
+.hot-rank.rank-3 {
+  background: #fef3c7;
+  color: #d97706;
 }
 
-.ranking-cover {
-  width: 60px;
-  height: 80px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-}
-
-.ranking-info {
+.hot-info {
   flex: 1;
   min-width: 0;
 }
 
-.ranking-title {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
+.hot-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e1b4b;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 150ms;
 }
 
-.ranking-author {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin: 0 0 var(--spacing-sm) 0;
+.hot-author {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 2px 0 0 0;
 }
 
-.ranking-meta {
+.hot-heat {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 6px;
+  flex-shrink: 0;
 }
 
-.ranking-category {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
-  background: var(--color-bg-tertiary);
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-}
-
-.ranking-hot {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: var(--font-size-xs);
-  color: var(--color-error);
-}
-
-.ranking-hot svg {
-  width: 12px;
-  height: 12px;
-}
-
-.similar-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--spacing-lg);
-}
-
-.similar-card {
-  background: var(--color-bg-primary);
-  border-radius: var(--radius-lg);
+.heat-bar {
+  width: 40px;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 9999px;
   overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border-light);
+}
+
+.heat-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #764ba2);
+  border-radius: 9999px;
+  transition: width 300ms;
+}
+
+.heat-value {
+  font-size: 11px;
+  color: #9ca3af;
+  width: 20px;
+  text-align: right;
+}
+
+/* ── Similar Recommendations (Right) ── */
+.similar-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.similar-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e1b4b;
+  margin: 0 0 12px 0;
+}
+
+.similar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.similar-item {
+  display: flex;
+  gap: 14px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   cursor: pointer;
-  transition: all var(--transition-normal);
+  transition: all 200ms;
 }
 
-.similar-card:hover {
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-lg);
-}
-
-.similar-cover-wrapper {
-  aspect-ratio: 3/4;
-  overflow: hidden;
+.similar-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .similar-cover {
-  width: 100%;
-  height: 100%;
+  width: 52px;
+  height: 68px;
   object-fit: cover;
-  transition: transform var(--transition-slow);
-}
-
-.similar-card:hover .similar-cover {
-  transform: scale(1.05);
+  border-radius: 10px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .similar-info {
-  padding: var(--spacing-md);
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.similar-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 .similar-title {
-  font-size: var(--font-size-sm);
+  font-size: 14px;
   font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-xs) 0;
+  color: #1e1b4b;
+  margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 150ms;
+}
+
+.similar-item:hover .similar-title {
+  color: #667eea;
 }
 
 .similar-author {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin: 0 0 var(--spacing-sm) 0;
-}
-
-.similar-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 2px 0 0 0;
 }
 
 .similar-tag {
-  font-size: var(--font-size-xs);
-  color: var(--color-primary-start);
-  background: var(--color-primary-glass);
+  font-size: 11px;
+  color: #6b7280;
+  background: #f3f4f6;
   padding: 2px 8px;
-  border-radius: var(--radius-full);
+  border-radius: 9999px;
+  flex-shrink: 0;
 }
 
+.similar-desc {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #9ca3af;
+  margin: 6px 0 0 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.similar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 8px;
+}
+
+.similar-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.similar-rating svg {
+  width: 12px;
+  height: 12px;
+  fill: #f59e0b;
+  stroke: #f59e0b;
+}
+
+.similar-rating span {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e1b4b;
+}
+
+.read-count {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+.btn-add-sm {
+  font-size: 11px;
+  font-weight: 600;
+  color: #667eea;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 150ms;
+}
+
+.btn-add-sm:hover {
+  text-decoration: underline;
+}
+
+/* ── Loading & Error ── */
 .spinner-container {
   display: flex;
   justify-content: center;
-  padding: var(--spacing-3xl);
+  padding: 64px 20px;
 }
 
 .spinner {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border: 3px solid rgba(102, 126, 234, 0.1);
-  border-top-color: var(--color-primary-start);
+  border-top-color: #667eea;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -559,53 +674,63 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--spacing-3xl);
-  color: var(--color-error);
+  padding: 64px 20px;
+  color: #ef4444;
 }
 
 .error-state svg {
-  width: 64px;
-  height: 64px;
-  margin-bottom: var(--spacing-md);
+  width: 60px;
+  height: 60px;
+  margin-bottom: 16px;
   opacity: 0.5;
 }
 
 .error-state p {
   margin: 0;
-  font-size: var(--font-size-base);
+  font-size: 14px;
 }
 
-@media (max-width: 768px) {
-  .recommend-carousel {
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .two-col-layout {
     grid-template-columns: 1fr;
   }
-  
-  .recommend-card {
+
+  .featured-card {
+    padding: 22px;
+  }
+
+  .featured-title {
+    font-size: 20px;
+  }
+
+  .featured-desc {
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-header {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .featured-card {
+    padding: 18px;
+    border-radius: 12px;
+  }
+
+  .featured-title {
+    font-size: 18px;
+  }
+
+  .similar-item {
     flex-direction: column;
   }
-  
-  .recommend-cover-wrapper {
-    width: 100%;
-  }
-  
-  .recommend-cover {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 3/4;
-  }
-  
-  .ranking-cover {
-    width: 48px;
-    height: 64px;
-  }
-  
-  .similar-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: var(--spacing-md);
-  }
-  
-  .similar-title {
-    font-size: var(--font-size-xs);
+
+  .similar-cover {
+    width: 72px;
+    height: 96px;
   }
 }
 </style>

@@ -1,454 +1,289 @@
 <template>
-  <nav class="navbar">
-    <div class="navbar-content">
-      <div class="navbar-brand" @click="$router.push('/shelf')">
-        <div class="brand-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-          </svg>
+  <aside class="sidebar">
+    <!-- Brand -->
+    <div class="sidebar-brand" @click="$router.push('/shelf')">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+        </svg>
+      </div>
+      <span class="brand-text">ReadVault</span>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <button
+        v-for="item in navItems"
+        :key="item.path"
+        class="nav-item"
+        :class="{ active: currentPath === item.path }"
+        @click="$router.push(item.path)"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="item.icon"></svg>
+        <span class="nav-label">{{ item.label }}</span>
+        <div v-if="currentPath === item.path" class="nav-dot" />
+      </button>
+    </nav>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      <div class="sidebar-divider" />
+      <div class="user-section">
+        <div class="user-avatar">{{ userInitial }}</div>
+        <div class="user-info">
+          <p class="user-name">{{ userName }}</p>
+          <p class="user-stats">已读 {{ finishedBookCount }} 本书</p>
         </div>
-        <span class="brand-text">ReadVault</span>
       </div>
-      
-      <div class="navbar-links">
-        <button 
-          class="nav-item" 
-          :class="{ active: currentPath === '/shelf' }"
-          @click="$router.push('/shelf')"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-          </svg>
-          <span>书架</span>
-        </button>
-        
-        <button 
-          class="nav-item" 
-          :class="{ active: currentPath === '/notes' }"
-          @click="$router.push('/notes')"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-            <line x1="16" y1="13" x2="8" y2="13"></line>
-            <line x1="16" y1="17" x2="8" y2="17"></line>
-            <polyline points="10 9 9 9 8 9"></polyline>
-          </svg>
-          <span>笔记</span>
-        </button>
-        
-        <button 
-          class="nav-item" 
-          :class="{ active: currentPath === '/discover' }"
-          @click="$router.push('/discover')"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-          <span>发现</span>
-        </button>
-        
-        <button 
-          class="nav-item" 
-          :class="{ active: currentPath === '/search' }"
-          @click="$router.push('/search')"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-          </svg>
-          <span>搜索</span>
-        </button>
-        
-        <button 
-          class="nav-item" 
-          :class="{ active: currentPath === '/statistics' }"
-          @click="$router.push('/statistics')"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="20" x2="18" y2="10"></line>
-            <line x1="12" y1="20" x2="12" y2="4"></line>
-            <line x1="6" y1="20" x2="6" y2="16"></line>
-          </svg>
-          <span>统计</span>
-        </button>
-        
-        <div class="nav-divider"></div>
-        
-        <button class="nav-item logout" @click="handleLogout">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
-          <span>退出</span>
-        </button>
-      </div>
-      
-      <button class="navbar-toggle" @click="toggleMobileMenu">
-        <svg v-if="!mobileMenuOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
+      <button class="logout-btn" @click="handleLogout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
-        <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
+        退出登录
       </button>
     </div>
-    
-    <transition name="slide-up">
-      <div v-if="mobileMenuOpen" class="mobile-menu">
-        <div class="mobile-menu-content">
-          <button 
-            class="mobile-nav-item" 
-            :class="{ active: currentPath === '/shelf' }"
-            @click="navigateAndClose('/shelf')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-            </svg>
-            <span>书架</span>
-          </button>
-          
-          <button 
-            class="mobile-nav-item" 
-            :class="{ active: currentPath === '/notes' }"
-            @click="navigateAndClose('/notes')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="16" y1="13" x2="8" y2="13"></line>
-              <line x1="16" y1="17" x2="8" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <span>笔记</span>
-          </button>
-          
-          <button 
-            class="mobile-nav-item" 
-            :class="{ active: currentPath === '/discover' }"
-            @click="navigateAndClose('/discover')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            <span>发现</span>
-          </button>
-          
-          <button 
-            class="mobile-nav-item" 
-            :class="{ active: currentPath === '/search' }"
-            @click="navigateAndClose('/search')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <span>搜索</span>
-          </button>
-          
-          <button 
-            class="mobile-nav-item" 
-            :class="{ active: currentPath === '/statistics' }"
-            @click="navigateAndClose('/statistics')"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="20" x2="18" y2="10"></line>
-              <line x1="12" y1="20" x2="12" y2="4"></line>
-              <line x1="6" y1="20" x2="6" y2="16"></line>
-            </svg>
-            <span>统计</span>
-          </button>
-          
-          <div class="mobile-divider"></div>
-          
-          <button class="mobile-nav-item logout" @click="handleLogout">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
-            <span>退出登录</span>
-          </button>
-        </div>
-      </div>
-    </transition>
-  </nav>
+  </aside>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { wereadApi } from '@/api/weread'
 
 const router = useRouter()
-const mobileMenuOpen = ref(false)
 
 const currentPath = computed(() => router.currentRoute.value.path)
+
+const userName = ref('微信读书用户')
+const userInitial = ref('微')
+const finishedBookCount = ref(0)
+
+onMounted(async () => {
+  try {
+    const res = await wereadApi.shelf()
+    if (res.code === 0 && res.data.books) {
+      const books = res.data.books
+      finishedBookCount.value = books.filter(b => b.finishReading === 1).length
+    }
+  } catch (_) {
+    // 静默处理
+  }
+})
+
+const navItems = [
+  { path: '/shelf', label: '我的书架', icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>' },
+  { path: '/notes', label: '读书笔记', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>' },
+  { path: '/discover', label: '发现好书', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
+  { path: '/search', label: '搜索书籍', icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' },
+  { path: '/statistics', label: '阅读统计', icon: '<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/>' },
+]
 
 const handleLogout = () => {
   wereadApi.clearApiKey()
   router.push('/auth')
 }
-
-const toggleMobileMenu = () => {
-  mobileMenuOpen.value = !mobileMenuOpen.value
-}
-
-const navigateAndClose = (path: string) => {
-  router.push(path)
-  mobileMenuOpen.value = false
-}
 </script>
 
 <style scoped>
-.navbar {
+.sidebar {
   position: fixed;
   top: 0;
   left: 0;
-  right: 0;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(102, 126, 234, 0.12);
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.navbar-content {
+  bottom: 0;
+  width: 240px;
+  z-index: var(--z-fixed);
+  background: var(--sidebar);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 24px;
-  max-width: 1400px;
-  margin: 0 auto;
+  flex-direction: column;
+  flex-shrink: 0;
 }
 
-.navbar-brand {
+.sidebar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 24px 20px 20px;
   cursor: pointer;
-  transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.navbar-brand:hover {
-  opacity: 0.85;
 }
 
 .brand-icon {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 10px;
-  color: #ffffff;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+  border-radius: var(--radius-lg);
+  color: white;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 
 .brand-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .brand-text {
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--sidebar-foreground);
   letter-spacing: -0.02em;
 }
 
-.navbar-links {
+.sidebar-nav {
+  flex: 1;
+  padding: 0 12px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 4px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: 12px;
+  padding: 10px 12px;
   border: none;
   background: transparent;
-  color: #6b6b8d;
+  color: var(--sidebar-foreground);
   font-size: 13px;
   font-weight: 500;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s;
+  text-align: left;
+  position: relative;
 }
 
 .nav-item svg {
-  width: 18px;
-  height: 18px;
-  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: all 0.15s;
 }
 
-.nav-item:hover {
-  background: #ede9fe;
-  color: #4c3f8a;
+.nav-label {
+  flex: 1;
 }
 
-.nav-item:hover svg {
-  transform: scale(1.05);
-}
-
-.nav-item.active {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #ffffff;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-}
-
-.nav-item.active:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-}
-
-.nav-item.logout {
-  margin-left: 8px;
-}
-
-.nav-item.logout:hover {
-  background: rgba(212, 24, 61, 0.1);
-  color: #d4183d;
-}
-
-.nav-divider {
-  width: 1px;
-  height: 24px;
-  background: rgba(102, 126, 234, 0.12);
-  margin: 0 8px;
-}
-
-.navbar-toggle {
-  display: none;
-  background: transparent;
-  border: none;
-  color: #1a1a2e;
-  cursor: pointer;
-  padding: 8px;
-  border-radius: 10px;
-  transition: background 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.navbar-toggle:hover {
-  background: #ede9fe;
-}
-
-.navbar-toggle svg {
-  width: 22px;
-  height: 22px;
-}
-
-.mobile-menu {
-  position: fixed;
-  top: 62px;
-  left: 0;
-  right: 0;
-  background: #ffffff;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  border-radius: 0 0 16px 16px;
-  overflow: hidden;
-}
-
-.mobile-menu-content {
-  padding: 8px;
-}
-
-.mobile-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 14px 20px;
-  border: none;
-  background: transparent;
-  color: #1a1a2e;
-  font-size: 15px;
-  font-weight: 500;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: left;
-}
-
-.mobile-nav-item svg {
-  width: 22px;
-  height: 22px;
+.nav-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #667eea;
   flex-shrink: 0;
 }
 
-.mobile-nav-item:hover {
-  background: #ede9fe;
+.nav-item:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-foreground);
 }
 
-.mobile-nav-item.active {
+.nav-item:hover svg {
+  opacity: 1;
+}
+
+.nav-item.active {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.04));
+  color: #667eea;
+}
+
+.nav-item.active svg {
+  opacity: 1;
+  color: #667eea;
+}
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--sidebar-border);
+}
+
+.sidebar-divider {
+  display: none;
+}
+
+.user-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
   background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
-.mobile-nav-item.logout {
-  color: #d4183d;
+.user-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.mobile-nav-item.logout:hover {
-  background: rgba(212, 24, 61, 0.1);
+.user-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sidebar-foreground);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.mobile-divider {
-  height: 1px;
-  background: rgba(102, 126, 234, 0.12);
-  margin: 8px 0;
+.user-stats {
+  font-size: 11px;
+  color: var(--muted-foreground);
+  margin: 2px 0 0;
 }
 
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+.logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
 }
 
-.slide-up-enter-from,
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(-20px);
+.logout-btn:hover {
+  background: var(--sidebar-accent);
+  color: var(--sidebar-foreground);
+}
+
+.logout-btn svg {
+  width: 14px;
+  height: 14px;
 }
 
 @media (max-width: 768px) {
-  .navbar-content {
-    padding: 10px 16px;
+  .sidebar {
+    width: 200px;
+    transform: translateX(-100%);
   }
   
-  .navbar-links {
-    display: none;
-  }
-  
-  .navbar-toggle {
-    display: flex;
-  }
-  
-  .brand-text {
-    font-size: 18px;
-  }
-  
-  .brand-icon {
-    width: 30px;
-    height: 30px;
-  }
-  
-  .brand-icon svg {
-    width: 16px;
-    height: 16px;
+  .sidebar.open {
+    transform: translateX(0);
   }
 }
 </style>

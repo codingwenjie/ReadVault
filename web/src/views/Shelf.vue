@@ -211,19 +211,30 @@ const formatReadTime = (seconds: number): string => {
   return `${m}m`
 }
 
+const isCurrentMonth = (timestamp: number): boolean => {
+  const now = new Date()
+  const date = new Date(timestamp * 1000)
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth()
+}
+
 const loadShelf = async () => {
   loading.value = true
   error.value = ''
 
   try {
-    const [shelfRes, noteRes] = await Promise.all([
+    const [shelfRes, noteRes, monthlyReadRes] = await Promise.all([
       wereadApi.shelf(),
       wereadApi.notebooks(100),
+      wereadApi.readdata('monthly'),
     ])
 
     if (shelfRes.code === 0) {
       books.value = shelfRes.data.books || []
-      finishedThisMonth.value = books.value.filter(b => b.finishReading === 1).length
+      
+      finishedThisMonth.value = books.value.filter(b => {
+        if (b.finishReading !== 1) return false
+        return isCurrentMonth(b.updateTime) || isCurrentMonth(b.readUpdateTime)
+      }).length
     }
 
     if (noteRes.code === 0 && noteRes.data.books) {
@@ -234,9 +245,8 @@ const loadShelf = async () => {
       notebookMap.value = map
     }
 
-    const readDataRes = await wereadApi.readdata()
-    if (readDataRes.code === 0) {
-      const d = readDataRes.data
+    if (monthlyReadRes.code === 0) {
+      const d = monthlyReadRes.data
       readingTime.value = formatReadTime(d.totalReadTime)
       continuousDays.value = d.readDays
     }

@@ -71,8 +71,7 @@
             </div>
             <div class="stat-info">
               <div class="stat-val-row">
-                <span class="stat-value">{{ stats.monthHours }}</span>
-                <span class="stat-unit">分钟</span>
+                <span class="stat-value">{{ formattedDuration }}</span>
               </div>
               <p class="stat-label">{{ durationLabel }}</p>
             </div>
@@ -213,6 +212,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { wereadApi } from '@/api/weread'
 import type { ReadDataResponse } from '@/api/weread'
+import { formatDuration } from '@/utils'
 
 const loading = ref(true)
 const error = ref('')
@@ -262,6 +262,17 @@ const durationLabel = computed(() => {
   if (selectedMode.value === 'overall') return '总阅读时长'
   if (selectedMonth.value) return `${selectedMonth.value.month}月时长`
   return '本月时长'
+})
+
+const totalReadSeconds = ref(0)
+
+const formattedDuration = computed(() => {
+  return formatDuration(totalReadSeconds.value)
+})
+
+const formattedAvgDuration = computed(() => {
+  const seconds = stats.value.avgMinutes * 60
+  return formatDuration(seconds)
 })
 
 interface StatCard {
@@ -331,7 +342,7 @@ const longestStreak = ref(0)
 const footStats = computed(() => [
   { label: '总阅读天数', value: `${totalReadDays.value} 天` },
   { label: '最长连续', value: `${longestStreak.value} 天` },
-  { label: '日均时长', value: `${stats.value.avgMinutes || 0} 分钟` },
+  { label: '日均时长', value: formattedAvgDuration.value },
 ])
 
 const donutSegments = computed(() => {
@@ -440,6 +451,8 @@ const processStats = (data: ReadDataResponse): void => {
   const readBooksStat = data.readStat?.find(s => s.stat === '读过')
   const finishBooksStat = data.readStat?.find(s => s.stat === '读完')
   const notesStat = data.readStat?.find(s => s.stat === '笔记')
+
+  totalReadSeconds.value = data.totalReadTime || 0
 
   stats.value = {
     totalBooks: parseReadStatCount(readBooksStat?.counts) || parseReadStatCount(finishBooksStat?.counts) || data.readLongest?.length || 0,

@@ -40,6 +40,14 @@ const isLoggedIn = computed(() => route.path !== '/auth')
 </script>
 
 <style>
+/* 安全兜底：确保不会出现浏览器级滚动条 */
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: clip;
+}
+
 .app-layout {
   display: flex;
   height: 100vh;
@@ -53,6 +61,7 @@ const isLoggedIn = computed(() => route.path !== '/auth')
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
   background: #f8f7ff;
 }
@@ -75,6 +84,7 @@ const isLoggedIn = computed(() => route.path !== '/auth')
 .main-content.auth-page {
   padding: 0;
   max-width: none;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {

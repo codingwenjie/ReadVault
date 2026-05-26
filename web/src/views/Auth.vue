@@ -125,14 +125,19 @@ const handleSubmit = async () => {
 
 <style scoped>
 .auth-container {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #f5f4ff 0%, #ede9fe 50%, #e0e7ff 100%);
   padding: 20px;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .bg-gradient {

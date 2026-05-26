@@ -191,11 +191,12 @@
   --blur-xl: 20px;
 }
 
-html {
-  font-size: var(--font-size);
-  scroll-behavior: smooth;
+html, body, #app {
   height: 100%;
-  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  overflow: clip;
+  overflow-y: clip;
 }
 
 body {
@@ -205,43 +206,17 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  height: 100%;
-  overflow: hidden;
-}
-
-#app {
-  height: 100%;
-  overflow: hidden;
 }
 
 @layer base {
-  html {
-    font-size: var(--font-size);
-    scroll-behavior: smooth;
-    height: 100%;
-    overflow: hidden;
-  }
-
-  body {
-    font-family: var(--font-sans);
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    height: 100%;
-    overflow: hidden;
-  }
-
-  #app {
-    height: 100%;
-    overflow: hidden;
-  }
-
   * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+  }
+
+  html {
+    font-size: var(--font-size);
   }
 
   h1 {

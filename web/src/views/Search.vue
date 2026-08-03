@@ -92,7 +92,6 @@
                 <span class="rating-value">{{ getRating(book) }}</span>
                 <span class="rating-max">/ 5.0</span>
               </div>
-              <button class="btn-add">加入书架</button>
             </div>
           </div>
         </div>
@@ -492,24 +491,6 @@ const handleBookClick = (book: SearchResultItem) => {
 .rating-max {
   font-size: 11px;
   color: #9ca3af;
-}
-
-.btn-add {
-  padding: 6px 16px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 9999px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 150ms;
-  box-shadow: 0 2px 4px rgba(102, 126, 234, 0.25);
-}
-
-.btn-add:hover {
-  opacity: 0.9;
-  box-shadow: 0 4px 8px rgba(102, 126, 234, 0.35);
 }
 
 /* ── Spinner ── */

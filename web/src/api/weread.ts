@@ -250,6 +250,109 @@ export interface SimilarResponse {
   }
 }
 
+export interface BestBookmarkItem {
+  bookId: string
+  userVid: number
+  bookmarkId: string
+  chapterUid: number
+  range: string
+  markText: string
+  totalCount: number
+}
+
+export interface BestBookmarksResponse {
+  synckey: number
+  totalCount: number
+  items: BestBookmarkItem[]
+  chapters: Chapter[]
+}
+
+export interface ReadReviewThought {
+  reviewId: string
+  review: {
+    abstract: string
+    content: string
+    range: string
+    createTime: number
+    author: {
+      userVid: number
+      name: string
+      avatar: string
+    }
+  }
+}
+
+export interface ReadReviewsResponse {
+  bookId: string
+  chapterUid: number
+  reviews: {
+    range: string
+    totalCount: number
+    hasMore: number
+    maxIdx: number
+    synckey: number
+    pageReviews: ReadReviewThought[]
+  }[]
+}
+
+export interface ChapterItem {
+  chapterUid: number
+  chapterIdx: number
+  title: string
+  wordCount: number
+  level: number
+  updateTime: number
+  price: number
+  paid: number
+  isMPChapter: number
+}
+
+export interface ChapterInfoResponse {
+  bookId: string
+  synckey: number
+  chapterUpdateTime: number
+  chapters: ChapterItem[]
+}
+
+export interface PublicReviewAuthor {
+  userVid: number
+  name: string
+  avatar: string
+}
+
+export interface PublicReviewItem {
+  idx: number
+  review: {
+    reviewId: string
+    review: {
+      content: string
+      htmlContent: string
+      star: number
+      isFinish: number
+      createTime: number
+      chapterName: string
+      author: {
+        userVid: number
+        name: string
+        avatar: string
+      }
+      book: {
+        bookId: string
+        title: string
+        author: string
+      }
+    }
+  }
+}
+
+export interface PublicReviewsResponse {
+  synckey: number
+  reviewsCnt: number
+  recentTotalCnt: number
+  reviewsHasMore: number
+  reviews: PublicReviewItem[]
+}
+
 const BASE_URL = '/api/weread'
 
 const request = async <T = unknown>(url: string, options?: RequestInit): Promise<ApiResponse<T>> => {
@@ -324,6 +427,33 @@ export const wereadApi = {
       url += `&sessionId=${sessionId}`
     }
     return request(url)
+  },
+
+  async hotmarks(bookId: string, chapterUid: number = 0): Promise<ApiResponse<BestBookmarksResponse>> {
+    return request(`/hotmarks/${bookId}?chapterUid=${chapterUid}`)
+  },
+
+  async readReviews(bookId: string, chapterUid: number, reviews: { range: string; maxIdx?: number; count?: number; synckey?: number }[]): Promise<ApiResponse<ReadReviewsResponse>> {
+    return request('/readreviews', {
+      method: 'POST',
+      body: JSON.stringify({ bookId, chapterUid, reviews })
+    })
+  },
+
+  async chapterInfo(bookId: string): Promise<ApiResponse<ChapterInfoResponse>> {
+    return request(`/chapterinfo/${bookId}`)
+  },
+
+  async publicReviews(bookId: string, reviewListType: number = 0, maxIdx: number = 0): Promise<ApiResponse<PublicReviewsResponse>> {
+    return request(`/public-reviews/${bookId}?reviewListType=${reviewListType}&maxIdx=${maxIdx}`)
+  },
+
+  async bookInfo(bookId: string): Promise<ApiResponse<{ bookId: string; title: string; author: string; cover: string; intro: string; category: string; publisher: string; publishTime: string; isbn: string; wordCount: number; newRating: number; newRatingCount: number }>> {
+    return request(`/book/info/${bookId}`)
+  },
+
+  async bookProgress(bookId: string): Promise<ApiResponse<{ bookId: string; book: { chapterUid: number; chapterOffset: number; progress: number; updateTime: number; recordReadingTime: number; finishTime?: number; isStartReading: number }; timestamp: number }>> {
+    return request(`/book/progress/${bookId}`)
   },
 
   setApiKey(key: string) {

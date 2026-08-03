@@ -5,6 +5,7 @@ import Notes from '@/views/Notes.vue'
 import Statistics from '@/views/Statistics.vue'
 import Search from '@/views/Search.vue'
 import Discover from '@/views/Discover.vue'
+import BookDetail from '@/views/BookDetail.vue'
 
 const routes = [
   {
@@ -40,6 +41,11 @@ const routes = [
     path: '/discover',
     name: 'Discover',
     component: Discover
+  },
+  {
+    path: '/book/:bookId',
+    name: 'BookDetail',
+    component: BookDetail
   }
 ]
 

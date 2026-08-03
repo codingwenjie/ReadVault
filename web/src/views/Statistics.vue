@@ -203,6 +203,41 @@
             </div>
           </div>
         </div>
+
+        <!-- Preference Row -->
+        <div class="charts-row">
+          <!-- Author Ranking -->
+          <div class="chart-card chart-wide">
+            <h3 class="chart-title">偏好作者</h3>
+            <p class="chart-subtitle">阅读时长排行</p>
+            <div class="author-list">
+              <div v-for="(author, i) in authorData" :key="author.name" class="author-item">
+                <span class="author-rank">{{ i + 1 }}</span>
+                <div class="author-info">
+                  <span class="author-name">{{ author.name }}</span>
+                  <span class="author-books">{{ author.count }} 本</span>
+                </div>
+                <span class="author-time">{{ author.readTime }}</span>
+              </div>
+              <div v-if="authorData.length === 0" class="empty-tip">暂无足够数据</div>
+            </div>
+          </div>
+
+          <!-- Reading Time Distribution -->
+          <div class="chart-card chart-narrow">
+            <h3 class="chart-title">阅读时段</h3>
+            <p class="chart-subtitle">{{ preferTimeWord || '24 小时分布' }}</p>
+            <div class="time-chart">
+              <div v-for="(item, i) in timeData" :key="i" class="time-col">
+                <div class="time-bar-wrap">
+                  <div class="time-bar-fill" :style="{ height: item.pct + '%' }"></div>
+                </div>
+                <span class="time-label">{{ item.label }}</span>
+              </div>
+            </div>
+            <div v-if="timeData.length === 0" class="empty-tip" style="margin-top: -8px;">暂无足够数据</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -325,6 +360,22 @@ interface CategoryItem {
 
 const categoryColors = ['#667eea', '#11998e', '#eb3349', '#f093fb', '#4facfe', '#8b5cf6', '#06b6d4', '#84cc16']
 const categoryData = ref<CategoryItem[]>([])
+
+interface AuthorItem {
+  name: string
+  count: number
+  readTime: string
+}
+
+interface TimeSlot {
+  label: string
+  minutes: number
+  pct: number
+}
+
+const authorData = ref<AuthorItem[]>([])
+const timeData = ref<TimeSlot[]>([])
+const preferTimeWord = ref('')
 
 interface HeatDay {
   date: Date
@@ -463,12 +514,37 @@ const processStats = (data: ReadDataResponse): void => {
   }
 
   if (data.preferCategory && data.preferCategory.length > 0) {
-    const totalVal = data.preferCategory.reduce((sum, c) => sum + (c.val || 0), 0)
+    const totalReadingTime = data.preferCategory.reduce((sum, c) => sum + (c.readingTime || 0), 0)
     categoryData.value = data.preferCategory.slice(0, 8).map((cat, idx) => ({
       name: cat.categoryTitle || cat.parentCategoryTitle || '其他',
-      value: totalVal > 0 ? Math.round((cat.val || 0) / totalVal * 100) : 0,
+      value: totalReadingTime > 0 ? Math.round((cat.readingTime || 0) / totalReadingTime * 100) : 0,
       color: categoryColors[idx % categoryColors.length],
     }))
+  }
+
+  if (data.preferAuthor && data.preferAuthor.length > 0) {
+    authorData.value = data.preferAuthor.map(a => ({
+      name: a.name,
+      count: a.count,
+      readTime: a.readTime,
+    }))
+  }
+
+  if (data.preferTime && data.preferTime.length === 24) {
+    const maxVal = Math.max(...data.preferTime, 1)
+    const reordered: number[] = []
+    for (let h = 0; h < 24; h++) {
+      reordered[h] = data.preferTime[(h + 18) % 24]
+    }
+    timeData.value = reordered.map((seconds, h) => ({
+      label: `${h}时`,
+      minutes: Math.round(seconds / 60),
+      pct: maxVal > 0 ? Math.round(seconds / maxVal * 100) : 0,
+    }))
+  }
+
+  if (data.preferTimeWord) {
+    preferTimeWord.value = data.preferTimeWord
   }
 
   generateHeatmapFromDailyData(data.dailyReadTimes, data.readTimes)
@@ -1026,6 +1102,114 @@ onMounted(() => {
   font-size: 14px;
   color: #9ca3af;
   margin: 0;
+}
+
+/* ── Author Ranking ── */
+.author-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.author-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.author-item:last-child {
+  border-bottom: none;
+}
+
+.author-rank {
+  width: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.author-item:nth-child(1) .author-rank { color: #f59e0b; }
+.author-item:nth-child(2) .author-rank { color: #9ca3af; }
+.author-item:nth-child(3) .author-rank { color: #d97706; }
+
+.author-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.author-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e1b4b;
+}
+
+.author-books {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.author-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: #667eea;
+  flex-shrink: 0;
+}
+
+/* ── Time Distribution ── */
+.time-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 120px;
+  padding-top: 4px;
+}
+
+.time-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.time-bar-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.time-bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, #667eea, #764ba2);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: height 300ms ease;
+}
+
+.time-label {
+  font-size: 8px;
+  color: #9ca3af;
+  margin-top: 4px;
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  height: 14px;
+  line-height: 1;
+}
+
+.empty-tip {
+  text-align: center;
+  padding: 20px;
+  color: #9ca3af;
+  font-size: 13px;
 }
 
 /* ── Responsive ── */

@@ -42,7 +42,6 @@
               </div>
               <span class="meta-readers">{{ formatReadCount(featuredBook.readingCount) }}人在读</span>
             </div>
-            <button class="btn-add-shelf">加入书架</button>
           </div>
         </div>
 
@@ -107,9 +106,87 @@
                       </svg>
                       <span>--</span>
                     </div>
-                    <button class="btn-add-sm">+ 加入书架</button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Popular Highlights Section -->
+        <div v-if="hotmarks.length > 0" class="section-block">
+          <div class="block-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+            </svg>
+            <h3>热门划线</h3>
+            <span class="block-sub">读者都在划的重点</span>
+          </div>
+          <div class="hotmarks-list">
+            <div v-for="(item, idx) in hotmarks.slice(0, 8)" :key="item.bookmarkId || idx" class="hotmark-item">
+              <div class="hotmark-quote">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="quote-icon"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+                <p class="hotmark-text">{{ item.markText }}</p>
+              </div>
+              <div class="hotmark-footer">
+                <span class="hotmark-chapter">{{ getChapterName(item.chapterUid) }}</span>
+                <div class="hotmark-footer-right">
+                  <span class="hotmark-count">{{ item.totalCount }} 人划线</span>
+                  <button class="thoughts-toggle" @click.stop="toggleThoughts(item)">
+                    {{ expandedHotmarks.has(item.bookmarkId) ? '收起想法' : '查看想法' }}
+                    <svg :class="{ rotated: expandedHotmarks.has(item.bookmarkId) }" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                </div>
+              </div>
+              <div v-if="expandedHotmarks.has(item.bookmarkId)" class="thoughts-panel">
+                <div v-if="hotmarkLoading[item.bookmarkId]" class="thoughts-loading">
+                  <div class="mini-spinner"></div>
+                  <span>加载想法中...</span>
+                </div>
+                <div v-else-if="hotmarkThoughts[item.bookmarkId]?.length" class="thoughts-list">
+                  <div v-for="thought in hotmarkThoughts[item.bookmarkId]" :key="thought.reviewId" class="thought-item">
+                    <img :src="thought.review.author?.avatar" :alt="thought.review.author?.name || '用户'" class="thought-avatar" />
+                    <div class="thought-body">
+                      <div class="thought-author-row">
+                        <span class="thought-author-name">{{ thought.review.author?.name || '匿名用户' }}</span>
+                        <span class="thought-time">{{ formatThoughtTime(thought.review.createTime) }}</span>
+                      </div>
+                      <p class="thought-text">{{ thought.review.content }}</p>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="thoughts-empty">暂无其他读者的想法</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Public Reviews Section -->
+        <div v-if="publicReviews.length > 0" class="section-block">
+          <div class="block-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <h3>读者点评</h3>
+            <span class="block-sub">精选书评</span>
+          </div>
+          <div class="reviews-list">
+            <div v-for="(item, idx) in publicReviews.slice(0, 5)" :key="item.review.reviewId || idx" class="review-card">
+              <div class="review-author">
+                <img :src="item.review.review.author?.avatar" :alt="item.review.review.author?.name || '用户'" class="review-avatar" />
+                <div class="review-author-info">
+                  <span class="review-name">{{ item.review.review.author?.name || '匿名用户' }}</span>
+                  <div class="review-stars">
+                    <svg v-for="s in 5" :key="s" viewBox="0 0 24 24" class="star" :class="{ filled: s * 20 <= (item.review.review.star || 0) }">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                  </div>
+                </div>
+                <span class="review-time">{{ formatReviewTime(item.review.review.createTime) }}</span>
+              </div>
+              <p class="review-content">{{ item.review.review.content }}</p>
+              <div v-if="item.review.review.book" class="review-book-info">
+                《{{ item.review.review.book.title }}》
               </div>
             </div>
           </div>
@@ -121,16 +198,51 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { wereadApi } from '@/api/weread'
-import type { RecommendBook, SimilarBook } from '@/api/weread'
+import type { RecommendBook, SimilarBook, BestBookmarkItem, PublicReviewItem, ReadReviewThought } from '@/api/weread'
 
+const router = useRouter()
 const recommendations = ref<RecommendBook[]>([])
 const hotBooks = ref<RecommendBook[]>([])
 const similarBooks = ref<SimilarBook[]>([])
+const hotmarks = ref<BestBookmarkItem[]>([])
+const hotmarksChapters = ref<{ chapterUid: number; title: string }[]>([])
+const publicReviews = ref<PublicReviewItem[]>([])
+const expandedHotmarks = ref<Set<string>>(new Set())
+const hotmarkThoughts = ref<Record<string, ReadReviewThought[]>>({})
+const hotmarkLoading = ref<Record<string, boolean>>({})
 const loading = ref(true)
 const error = ref('')
 
 const featuredBook = computed(() => recommendations.value[0] || null)
+
+const getChapterName = (chapterUid: number): string => {
+  const ch = hotmarksChapters.value.find(c => c.chapterUid === chapterUid)
+  return ch?.title || `第 ${chapterUid} 章`
+}
+
+const formatReviewTime = (timestamp: number): string => {
+  if (!timestamp) return ''
+  const d = new Date(timestamp * 1000)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  if (diff < 86400000) return '今天'
+  if (diff < 172800000) return '昨天'
+  if (diff < 259200000) return '前天'
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+
+const formatThoughtTime = (timestamp: number): string => {
+  if (!timestamp) return ''
+  const d = new Date(timestamp * 1000)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  if (diff < 259200000) return `${Math.floor(diff / 86400000)}天前`
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
 
 const formatReadCount = (count?: number): string => {
   if (!count) return ''
@@ -153,6 +265,37 @@ const getHeatValue = (index: number): number => {
   return heatValues[index] || 70
 }
 
+const toggleThoughts = async (bookmark: BestBookmarkItem) => {
+  const key = bookmark.bookmarkId
+  if (expandedHotmarks.value.has(key)) {
+    expandedHotmarks.value.delete(key)
+    expandedHotmarks.value = new Set(expandedHotmarks.value)
+    return
+  }
+  expandedHotmarks.value.add(key)
+  expandedHotmarks.value = new Set(expandedHotmarks.value)
+
+  if (hotmarkThoughts.value[key]?.length) return
+
+  hotmarkLoading.value[key] = true
+  try {
+    const firstBook = recommendations.value[0]
+    if (!firstBook) return
+    const res = await wereadApi.readReviews(firstBook.bookId, bookmark.chapterUid, [
+      { range: bookmark.range, count: 10 }
+    ])
+    if (res.code === 0 && res.data.reviews?.length > 0) {
+      hotmarkThoughts.value[key] = res.data.reviews[0].pageReviews || []
+    } else {
+      hotmarkThoughts.value[key] = []
+    }
+  } catch {
+    hotmarkThoughts.value[key] = []
+  } finally {
+    hotmarkLoading.value[key] = false
+  }
+}
+
 const loadDiscover = async () => {
   loading.value = true
   error.value = ''
@@ -172,10 +315,25 @@ const loadDiscover = async () => {
     }
 
     if (recommendations.value.length > 0) {
+      const firstBook = recommendations.value[0]
       try {
-        const similarRes = await wereadApi.similar(recommendations.value[0].bookId, 6)
+        const similarRes = await wereadApi.similar(firstBook.bookId, 6)
         if (similarRes.code === 0) {
           similarBooks.value = similarRes.data.booksimilar?.books || []
+        }
+      } catch (_) {}
+
+      try {
+        const [hotmarksRes, reviewsRes] = await Promise.all([
+          wereadApi.hotmarks(firstBook.bookId),
+          wereadApi.publicReviews(firstBook.bookId, 0, 0),
+        ])
+        if (hotmarksRes.code === 0) {
+          hotmarks.value = hotmarksRes.data.items || []
+          hotmarksChapters.value = hotmarksRes.data.chapters || []
+        }
+        if (reviewsRes.code === 0) {
+          publicReviews.value = reviewsRes.data.reviews?.slice(0, 5) || []
         }
       } catch (_) {}
     }
@@ -194,12 +352,12 @@ const loadDiscover = async () => {
 }
 
 const handleBookClick = (book: RecommendBook | { bookId: string; title: string }) => {
-  console.log('点击书籍:', book.title)
+  router.push(`/book/${book.bookId}`)
 }
 
 const handleSimilarClick = (book: SimilarBook) => {
-  const info = book.book?.bookInfo
-  console.log('点击相似书籍:', info?.title)
+  const bookId = book.book?.bookInfo?.bookId
+  if (bookId) router.push(`/book/${bookId}`)
 }
 
 onMounted(() => {
@@ -351,22 +509,6 @@ onMounted(() => {
 .meta-readers {
   font-size: 13px;
   opacity: 0.65;
-}
-
-.btn-add-shelf {
-  padding: 10px 24px;
-  background: white;
-  color: #667eea;
-  border: none;
-  border-radius: 9999px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 150ms;
-}
-
-.btn-add-shelf:hover {
-  background: rgba(255, 255, 255, 0.92);
 }
 
 /* ── Two Column Layout ── */
@@ -636,18 +778,292 @@ onMounted(() => {
   margin-left: 4px;
 }
 
-.btn-add-sm {
-  font-size: 11px;
-  font-weight: 600;
+/* ── Section Block ── */
+.section-block {
+  margin-top: 24px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+}
+
+.block-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.block-header svg {
+  width: 16px;
+  height: 16px;
   color: #667eea;
-  background: none;
+}
+
+.block-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e1b4b;
+  margin: 0;
+}
+
+.block-sub {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-left: 4px;
+}
+
+/* ── Hotmarks ── */
+.hotmarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hotmark-item {
+  padding: 14px 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+  border-left: 3px solid #667eea;
+}
+
+.hotmark-quote {
+  display: flex;
+  gap: 10px;
+}
+
+.quote-icon {
+  width: 16px;
+  height: 16px;
+  color: #667eea;
+  flex-shrink: 0;
+  margin-top: 2px;
+  opacity: 0.5;
+}
+
+.hotmark-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #374151;
+  margin: 0;
+  font-style: italic;
+}
+
+.hotmark-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.hotmark-chapter {
+  font-size: 12px;
+  color: #667eea;
+  font-weight: 500;
+}
+
+.hotmark-count {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ── Reviews ── */
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.review-card {
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+
+.review-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.review-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.review-author-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.review-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e1b4b;
+}
+
+.review-stars {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.review-stars .star {
+  width: 10px;
+  height: 10px;
+  fill: #d1d5db;
+  stroke: #d1d5db;
+}
+
+.review-stars .star.filled {
+  fill: #f59e0b;
+  stroke: #f59e0b;
+}
+
+.review-time {
+  font-size: 11px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.review-content {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #6b7280;
+  margin: 0 0 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.review-book-info {
+  font-size: 12px;
+  color: #667eea;
+  font-weight: 500;
+}
+
+/* ── Thoughts Panel ── */
+.hotmark-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.thoughts-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.08);
   border: none;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 150ms;
 }
 
-.btn-add-sm:hover {
-  text-decoration: underline;
+.thoughts-toggle:hover {
+  background: rgba(102, 126, 234, 0.18);
+}
+
+.thoughts-toggle svg {
+  width: 12px;
+  height: 12px;
+  transition: transform 200ms;
+}
+
+.thoughts-toggle svg.rotated {
+  transform: rotate(180deg);
+}
+
+.thoughts-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.thoughts-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  color: #9ca3af;
+  font-size: 12px;
+}
+
+.mini-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(102, 126, 234, 0.1);
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.thoughts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.thought-item {
+  display: flex;
+  gap: 10px;
+}
+
+.thought-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.thought-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.thought-author-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.thought-author-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.thought-time {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.thought-text {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #6b7280;
+  margin: 0;
+}
+
+.thoughts-empty {
+  text-align: center;
+  padding: 16px;
+  font-size: 12px;
+  color: #9ca3af;
 }
 
 /* ── Loading & Error ── */

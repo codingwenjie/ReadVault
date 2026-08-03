@@ -123,6 +123,54 @@ router.get('/similar/:bookId', async (req, res) => {
   }
 })
 
+router.get('/hotmarks/:bookId', async (req, res) => {
+  try {
+    const { bookId } = req.params
+    const { chapterUid = 0, synckey = 0 } = req.query
+    const result = await wereadClient.hotmarks(bookId, Number(chapterUid), Number(synckey))
+    res.json({ code: 0, data: result, msg: 'success' })
+  } catch (error) {
+    res.json({ code: -1, data: null, msg: error instanceof Error ? error.message : 'Unknown error' })
+  }
+})
+
+router.get('/chapterinfo/:bookId', async (req, res) => {
+  try {
+    const { bookId } = req.params
+    const result = await wereadClient.chapterInfo(bookId)
+    res.json({ code: 0, data: result, msg: 'success' })
+  } catch (error) {
+    res.json({ code: -1, data: null, msg: error instanceof Error ? error.message : 'Unknown error' })
+  }
+})
+
+router.get('/public-reviews/:bookId', async (req, res) => {
+  try {
+    const { bookId } = req.params
+    const { reviewListType = 0, count = 20, maxIdx = 0, synckey = 0 } = req.query
+    const result = await wereadClient.publicReviews(
+      bookId,
+      Number(reviewListType),
+      Number(count),
+      Number(maxIdx),
+      Number(synckey)
+    )
+    res.json({ code: 0, data: result, msg: 'success' })
+  } catch (error) {
+    res.json({ code: -1, data: null, msg: error instanceof Error ? error.message : 'Unknown error' })
+  }
+})
+
+router.post('/readreviews', async (req, res) => {
+  try {
+    const { bookId, chapterUid, reviews } = req.body
+    const result = await wereadClient.readReviews(bookId, chapterUid, reviews)
+    res.json({ code: 0, data: result, msg: 'success' })
+  } catch (error) {
+    res.json({ code: -1, data: null, msg: error instanceof Error ? error.message : 'Unknown error' })
+  }
+})
+
 router.post('/verify', async (req, res) => {
   try {
     const { apiKey } = req.body

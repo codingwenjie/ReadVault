@@ -7,13 +7,6 @@
             <h1 class="shelf-title">我的书架</h1>
             <p class="shelf-subtitle">共收录 {{ totalCount }} 本书籍</p>
           </div>
-          <button class="add-book-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
-            添加书籍
-          </button>
         </div>
 
         <div class="stats-grid">
@@ -137,6 +130,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { wereadApi } from '@/api/weread'
 import type { Book, NotebookBook } from '@/api/weread'
 
@@ -178,6 +172,8 @@ const getStatusClass = (book: Book): string => {
   if (book.finishReading === 1) return 'badge-done'
   return 'badge-reading'
 }
+
+const router = useRouter()
 
 const filterTabs = computed(() => [
   { key: 'all', label: '全部', count: books.value.length },
@@ -258,7 +254,7 @@ const loadShelf = async () => {
 }
 
 const handleBookClick = (book: Book) => {
-  console.log('点击书籍:', book.title)
+  router.push(`/book/${book.bookId}`)
 }
 
 loadShelf()
@@ -290,32 +286,6 @@ loadShelf()
   margin: 2px 0 0 0;
 }
 
-.add-book-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 18px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  border-radius: 9999px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 200ms;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-
-.add-book-btn:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102,126,234,0.25);
-}
-
-.add-book-btn svg {
-  width: 14px;
-  height: 14px;
-}
 
 .stats-grid {
   display: grid;
